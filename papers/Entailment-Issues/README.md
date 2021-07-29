@@ -1,6 +1,6 @@
 # Issues with Entailment-based Zero-shot Text Classification
 
-This repository will contain the open-sourced official implementation of the paper
+This repository contains the open-sourced official implementation of the paper
 
 [Issues with Entailment-based Zero-shot Text Classification](https://aclanthology.org/2021.acl-short.99/) (ACL-IJCNLP 2021).  
 _Tingting Ma, Jin-Ge Yao, Chin-Yew Lin, and Tiejun Zhao_
@@ -19,11 +19,12 @@ If you find this repo helpful, please cite the following paper
 }
 ```
 
-For any questions, please feel free to open GitHub issues or email me at hittingtingma@gmail.com
+For any questions/comments, please feel free to open GitHub issues or email the <a href="mailto:hittingtingma@gmail.com">fist author<a/> directly.
 
 
 
 ## Requirements
+    
 The code requires  
 ```
 python >= 3.6  
@@ -32,37 +33,38 @@ transformers == 2.5.1
 nltk  
 sklearn  
 ```
-## Download dataset
+    
+## Downloading datasets
 
-You can download the Yahoo, Emotion and Situation dataset from [here](https://drive.google.com/file/d/1qGmyEVD19ruvLLz9J0QGV7rsZPFEz2Az/view) , we only use the test set in our experiments. Note that we use GLUE version validation set for SST-2.  
+For convenience, you can download the Yahoo, Emotion, and Situation datasets from [this link](https://drive.google.com/file/d/1qGmyEVD19ruvLLz9J0QGV7rsZPFEz2Az/view). Only the test sets are utilized in the paper experiments. Note that we use the GLUE version validation set for SST-2.  
 
-download and preprocess other data by running  
+Download and preprocess other data by running the script below:
 
 ```
 bash code/preprocess/download_data.sh
 ```
 
-## Download pretrained model
+## Downloading pretrained model
 
-You can get the pretrained model used in Yin 2019 et al. from [here](https://drive.google.com/file/d/1ILCQR_y-OSTdgkz45LP7JsHcelEsvoIn/view) .  
+For convenience, you can get the pretrained model used in Yin 2019 et al. at [this link](https://drive.google.com/file/d/1ILCQR_y-OSTdgkz45LP7JsHcelEsvoIn/view).
 
-We also release the models we trained which are used in Table 1 and Table 2. Download by run:  
+We also release the models we trained, which are used in Table 1 and Table 2. They can be downloaded by running thh script below:  
 
 ```
 bash code/preprocess/download_model.sh
 ```
 
-## Experiment
+## Experiments
 
-1. Run NSP  
+### 1. NSP  
 
-To replicate our NSP(Reverse) results on AGNews test set:  
+To replicate our NSP (Reverse) results on the AGNews test set:  
 
-each input line has format :   
+Each input line has format:
 ```
 text\tlabel\n
 ```
-where input text and label are separated by a tab.    
+where input text and label are separated by a tab.
 
 ```python
 python code/nsp/test_zero.py --input_fn data/test/agnews.txt \
@@ -74,9 +76,9 @@ python code/nsp/test_zero.py --input_fn data/test/agnews.txt \
     --label_single True
 ```
 
-2. variance experiment   
+### 2. Variance experiment   
 
-run the test_zero.py script using the downloaded model:  
+Run the test_zero.py script using the downloaded model:  
 
 ```python
 python code/nsp/test_zero.py --input_fn data/test/agnews.txt \
@@ -88,7 +90,7 @@ python code/nsp/test_zero.py --input_fn data/test/agnews.txt \
     --label_single True
 ```
 
-3. shuffle the input word sequence    
+### 3. Shuffle the input word sequence    
 
 use --random_input argument  
 
@@ -103,11 +105,11 @@ python code/nsp/test_zero.py --input_fn data/test/agnews.txt \
     --label_single True
 ```
 
-4. Debias methods  
+### 4. Debias methods  
 
-Note that we merge neutral and contradition classes into not-entailment class in all experiments. And we use four gpus to train the NLI model.  
+Note that we merge neutral and contradition classes into not-entailment class in all experiments. Also, we use four GPUs to train the NLI model.  
 
-For the Debias-DA method, we directly merge GLUE MNLI training dataset with [augmented data](https://github.com/Aatlantise/syntactic-augmentation-nli/blob/master/datasets/inv_trsf_large.tsv) .   
+For the Debias-DA method, we directly merge the GLUE MNLI training dataset with [augmented data](https://github.com/Aatlantise/syntactic-augmentation-nli/blob/master/datasets/inv_trsf_large.tsv).
 
 ```python
 python code/nsp/train_nli.py --data_dir data/nli/mnli-da \
@@ -126,7 +128,7 @@ python code/nsp/train_nli.py --data_dir data/nli/mnli-da \
 --max_seq_length 128
 ```
 
-Train a model only using bias features:  
+To train a model only using bias features:
 
 ```python
 python code/debias/train_bias_only.py --input_dir data/nli/mnli \
@@ -135,7 +137,7 @@ python code/debias/train_bias_only.py --input_dir data/nli/mnli \
 --w2v_fn data/crawl-300d-2M.vec
 ```
 
-Train the Debias-Reweight model, evaluate the model on Hans and MNLI matched dev set  
+To train the Debias-Reweight model and evaluate it on Hans and MNLI matched dev sets:  
 
 ```python
 python code/debias/train_debias.py --input_dir data/nli/mnli \
@@ -153,7 +155,7 @@ python code/debias/train_debias.py --input_dir data/nli/mnli \
 --max_seq_length 128
 ```
 
-For the Debias-BiasProduct,  
+For the Debias-BiasProduct:
 
 ```python
 python code/debias/train_debias.py --input_dir data/nli/mnli \
@@ -171,8 +173,10 @@ python code/debias/train_debias.py --input_dir data/nli/mnli \
 --max_seq_length 128
 ```
 
-If you try to replicate the debias experiment results, the performance may be slightly different from our paper's results. This
-is due to randomness coming from pytorch training, and the small variance doesn't impact our main conclusion.   
+## Note    
+    
+If you try to replicate the debias experiment results, the performance may be slightly different from the results presented in the paper.
+This is due to randomness coming from pytorch training. The small expected variance doesn't impact our main conclusions.
 
 
 ## Contributing
