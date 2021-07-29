@@ -1,0 +1,15 @@
+["politics", "sports", "business", "technology"]
+{
+    "politics": [
+        "it is related with politics ."
+    ],
+    "sports": [
+        "it is related with sports ."
+    ],
+    "business": [
+        "it is related with business ."
+    ],
+    "technology": [
+        "it is related with technology ."
+    ]
+}

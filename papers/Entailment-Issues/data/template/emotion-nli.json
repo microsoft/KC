@@ -1,0 +1,39 @@
+["sadness", "joy", "anger", "disgust", "fear", "surprise", "shame", "guilt", "love", "none"]
+{
+    "sadness": [
+        "this person feels sad",
+        "this person expresses emotions experienced when not in a state of well-being"
+    ],
+    "joy": [
+        "the person feels joyful",
+        "the person expresses a feeling of great pleasure and happiness."
+    ],
+    "anger": [
+        "the person feels angry",
+        "the person expresses a strong feeling of annoyance, displeasure, or hostility"
+    ],
+    "disgust": [
+        "the person feels disgusted",
+        "the person expresses a feeling of revulsion or strong disapproval aroused by something unpleasant or offensive"
+    ],
+    "fear": [
+        "the person is afraid of something",
+        "the person expresses an unpleasant emotion caused by the belief that someone or something is dangerous, likely to cause pain , or a threat"
+    ],
+    "surprise": [
+        "the person feels surprised",
+        "the person expresses a feeling of mild astonishment or shock caused by something unexpected"
+    ],
+    "shame": [
+        "the person feels shameful",
+        "the person expresses a painful feeling of humiliation or distress caused by the consciousness of wrong or foolish behavior"
+    ],
+    "guilt": [
+        "the person feels guilty",
+        "the person expresses a feeling of having done wrong or failed in an obligation"
+    ],
+    "love": [
+        "the person loves that",
+        "the person expresses a great interest and pleasure in something"
+    ]
+}

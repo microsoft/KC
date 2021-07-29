@@ -19,9 +19,160 @@ If you find this repo helpful, please cite the following paper
 }
 ```
 
-For any questionscomments, please feel free to open GitHub issues.
+For any questions, please feel free to open GitHub issues or email me at hittingtingma@gmail.com
 
 
+
+## Requirements
+The code requires  
+```
+python >= 3.6  
+torch == 1.3.1  
+transformers == 2.5.1  
+nltk  
+sklearn  
+```
+## Download dataset
+
+You can download the Yahoo, Emotion and Situation dataset from [here](https://drive.google.com/file/d/1qGmyEVD19ruvLLz9J0QGV7rsZPFEz2Az/view) , we only use the test set in our experiments. Note that we use GLUE version validation set for SST-2.  
+
+download and preprocess other data by running  
+
+```
+bash code/preprocess/download_data.sh
+```
+
+## Download pretrained model
+
+You can get the pretrained model used in Yin 2019 et al. from [here](https://drive.google.com/file/d/1ILCQR_y-OSTdgkz45LP7JsHcelEsvoIn/view) .  
+
+We also release the models we trained which are used in Table 1 and Table 2. Download by run:  
+
+```
+bash code/preprocess/download_model.sh
+```
+
+## Experiment
+
+1. Run NSP  
+
+To replicate our NSP(Reverse) results on AGNews test set:  
+
+each input line has format :   
+```
+text\tlabel\n
+```
+where input text and label are separated by a tab.    
+
+```python
+python code/nsp/test_zero.py --input_fn data/test/agnews.txt \
+    --label_fn data/template/agnews-nli.json \
+    --output_dir experiments/agnews-nspr \
+    --pretrain_model_dir bert-base-uncased \
+    --use_nsp True \
+    --reverse True \
+    --label_single True
+```
+
+2. variance experiment   
+
+run the test_zero.py script using the downloaded model:  
+
+```python
+python code/nsp/test_zero.py --input_fn data/test/agnews.txt \
+    --label_fn data/template/agnews-nli.json \
+    --output_dir experiments/agnews-mnli4 \
+    --pretrain_model_dir experiments/model/mnli-4 \
+    --use_nsp False \
+    --reverse False \
+    --label_single True
+```
+
+3. shuffle the input word sequence    
+
+use --random_input argument  
+
+```python
+python code/nsp/test_zero.py --input_fn data/test/agnews.txt \
+    --label_fn data/template/agnews-nli.json \
+    --output_dir experiments/agnews-nspr-rand \
+    --pretrain_model_dir bert-base-uncased \
+    --use_nsp True \
+    --reverse True \
+    --random_input True \
+    --label_single True
+```
+
+4. Debias methods  
+
+Note that we merge neutral and contradition classes into not-entailment class in all experiments. And we use four gpus to train the NLI model.  
+
+For the Debias-DA method, we directly merge GLUE MNLI training dataset with [augmented data](https://github.com/Aatlantise/syntactic-augmentation-nli/blob/master/datasets/inv_trsf_large.tsv) .   
+
+```python
+python code/nsp/train_nli.py --data_dir data/nli/mnli-da \
+--model_type bert \
+--model_name_or_path bert-base-uncased \
+--task_name rte \
+--do_train True \
+--do_eval True \
+--do_lower_case True \
+--output_dir experiments/model/mnli-da \
+--log_dir logs/mnli-da \
+--num_train_epochs 3 \
+--learning_rate 2e-5 \
+--per_gpu_train_batch_size 16 \
+--seed 42 \
+--max_seq_length 128
+```
+
+Train a model only using bias features:  
+
+```python
+python code/debias/train_bias_only.py --input_dir data/nli/mnli \
+--hans data/nli/hans \
+--out_dir experiments/model/bias-only \
+--w2v_fn data/crawl-300d-2M.vec
+```
+
+Train the Debias-Reweight model, evaluate the model on Hans and MNLI matched dev set  
+
+```python
+python code/debias/train_debias.py --input_dir data/nli/mnli \
+--hans_dir data/nli/hans \
+--output_dir experiments/model/mnli-reweight \
+--custom_bias experiments/model/bias-only/train.pkl \
+--mode reweight_baseline \
+--bert_model bert-base-uncased \
+--do_train True \
+--do_eval True \
+--num_train_epochs 3 \
+--learning_rate 2e-5 \
+--train_batch_size 64 \
+--seed 42 \
+--max_seq_length 128
+```
+
+For the Debias-BiasProduct,  
+
+```python
+python code/debias/train_debias.py --input_dir data/nli/mnli \
+--hans_dir data/nli/hans \
+--output_dir experiments/model/mnli-biasproduct \
+--custom_bias experiments/model/bias-only/train.pkl \
+--mode bias_product_baseline \
+--bert_model bert-base-uncased \
+--do_train True \
+--do_eval True \
+--num_train_epochs 3 \
+--learning_rate 2e-5 \
+--train_batch_size 64 \
+--seed 42 \
+--max_seq_length 128
+```
+
+If you try to replicate the debias experiment results, the performance may be slightly different from our paper's results. This
+is due to randomness coming from pytorch training, and the small variance doesn't impact our main conclusion.   
 
 
 ## Contributing

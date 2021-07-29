@@ -1,0 +1,43 @@
+["Society & Culture", "Science & Mathematics", "Health", "Education & Reference", "Computers & Internet", "Sports", "Business & Finance", "Entertainment & Music", "Family & Relationships", "Politics & Government"]
+{
+    "Society & Culture": [
+        "it is related with society or culture",
+        "this text  describes something about an extended social group having a distinctive cultural and economic organization or a particular society at a particular time and place"
+    ],
+    "Science & Mathematics": [
+        "it is related with science or mathematics",
+        "this text  describes something about a particular branch of scientific knowledge or a science (or group of related sciences) dealing with the logic of quantity and shape and arrangement"
+    ],
+    "Health": [
+        "it is related with health",
+        "this text  describes something about a healthy state of wellbeing free from disease"
+    ],
+    "Education & Reference": [
+        "it is related with education or reference",
+        "this text  describes something about the activities of educating or instructing or activities that impart knowledge or skill or an indicator that orients you generally"
+    ],
+    "Computers & Internet": [
+        "it is related with computers or Internet",
+        "this text  describes something about a machine for performing calculations automatically or a computer network consisting of a worldwide network of computer networks that use the TCP/IP network protocols to facilitate data transmission and exchange"
+    ],
+    "Sports": [
+        "it is related with sports",
+        "this text  describes something about an active diversion requiring physical exertion and competition"
+    ],
+    "Business & Finance": [
+        "it is related with business or finance",
+        "this text  describes something about a commercial or industrial enterprise and the people who constitute it or the commercial activity of providing funds and capital"
+    ],
+    "Entertainment & Music": [
+        "it is related with entertainment or music",
+        "this text  describes something about an activity that is diverting and that holds the attention or an artistic form of auditory communication incorporating instrumental or vocal tones in a structured and continuous manner"
+    ],
+    "Family & Relationships": [
+        "it is related with family or relationships",
+        "this text  describes something about a social unit living together, primary social group; parents and children or a relation between people"
+    ],
+    "Politics & Government": [
+        "it is related with politics or government",
+        "this text  describes something about social relations involving intrigue to gain authority or power or the organization that is the governing authority of a political unit"
+    ]
+}

@@ -1,0 +1,47 @@
+["search", "evac", "infra", "utils", "water", "shelter", "med", "food", "crimeviolence", "terrorism", "regimechange", "none"]
+{
+    "search": [
+        "people there need search",
+        "people there need the activity of looking thoroughly in order to find something or someone"
+    ],
+    "evac": [
+        "This place is very dangerous and it is urgent to evacuate people to safety.",
+        "we need to move people from a place of danger to a safer place."
+    ],
+    "infra": [
+        "people there need infrastructures",
+        "people there need the basic structure or features of a system or organization"
+    ],
+    "utils": [
+        "people there need utilities",
+        "people there need the service (electric power or water or transportation) provided by a public utility"
+    ],
+    "water": [
+        "people there need water",
+        "Clean drinking water is urgently needed"
+    ],
+    "shelter": [
+        "people there need shelter",
+        "people there need a structure that provides privacy and protection from danger"
+    ],
+    "med": [
+        "people need medical assistance",
+        "people need an allied health professional who supports the work of physicians and other health professionals"
+    ],
+    "food": [
+        "people there need food",
+        "people there need any substance that can be metabolized by an animal to give energy and build tissue"
+    ],
+    "crimeviolence": [
+        "crime violence happened there",
+        "an act punishable by law; usually considered an evil act happened there"
+    ],
+    "terrorism": [
+        "this text describes terrorist activity",
+        "There was a terrorist activity in that place, such as an explosion, shooting"
+    ],
+    "regimechange": [
+        "Regime change happened in this country",
+        "Rebellion happens in that country"
+    ]
+}
