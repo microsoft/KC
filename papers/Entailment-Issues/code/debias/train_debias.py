@@ -3,6 +3,8 @@ Script to train BERT on MNLI with our loss function
 
 Modified from the script from
 https://github.com/UKPLab/emnlp2020-debiasing-unknown/blob/main/src/train_distill_bert.py
+
+License: Apache License 2.0
 """
 
 import argparse
