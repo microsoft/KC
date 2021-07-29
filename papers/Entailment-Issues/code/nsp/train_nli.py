@@ -1,5 +1,7 @@
 '''
 This code is adapted from https://github.com/huggingface/transformers
+
+License: Apache 2.0
 '''
 
 import argparse
