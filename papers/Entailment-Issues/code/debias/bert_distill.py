@@ -1,5 +1,7 @@
 '''
 The code is adapted from https://github.com/UKPLab/emnlp2020-debiasing-unknown/blob/main/src/bert_distill.py
+
+License: Apache License 2.0
 '''
 
 from transformers.modeling_bert import BertModel, BertPreTrainedModel
