@@ -1,3 +1,7 @@
+'''
+The code is adapted from https://github.com/UKPLab/emnlp2020-debiasing-unknown/blob/main/src/utils.py
+'''
+
 import logging
 import pickle
 import sys

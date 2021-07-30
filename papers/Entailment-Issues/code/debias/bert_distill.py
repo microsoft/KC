@@ -1,3 +1,7 @@
+'''
+The code is adapted from https://github.com/UKPLab/emnlp2020-debiasing-unknown/blob/main/src/bert_distill.py
+'''
+
 from transformers.modeling_bert import BertModel, BertPreTrainedModel
 from torch import nn
 from torch.nn import CrossEntropyLoss

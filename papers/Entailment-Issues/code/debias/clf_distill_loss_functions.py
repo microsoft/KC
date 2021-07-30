@@ -1,3 +1,7 @@
+'''
+The code is adapted from https://github.com/UKPLab/emnlp2020-debiasing-unknown/blob/main/src/clf_distill_loss_functions.py
+'''
+
 import torch
 from torch import nn
 from torch.nn import functional as F

@@ -178,6 +178,14 @@ python code/debias/train_debias.py --input_dir data/nli/mnli \
 If you try to replicate the debias experiment results, the performance may be slightly different from the results presented in the paper.
 This is due to randomness coming from pytorch training. The small expected variance doesn't impact our main conclusions.
 
+## Acknowledgement
+
+We thank the original authors for sharing their code, data or model:
+
+[https://github.com/huggingface/transformers/tree/v2.5.1/examples](https://github.com/huggingface/transformers/tree/v2.5.1/examples)
+[https://github.com/yinwenpeng/BenchmarkingZeroShot](https://github.com/yinwenpeng/BenchmarkingZeroShot)
+[https://github.com/chrisc36/debias](https://github.com/chrisc36/debias)
+[https://github.com/UKPLab/emnlp2020-debiasing-unknown](https://github.com/UKPLab/emnlp2020-debiasing-unknown)
 
 ## Contributing
 
