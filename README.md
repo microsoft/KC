@@ -6,6 +6,7 @@ Our group is hiring both research interns and full-time employees! If you are in
 
 # News:
 
+* 2021-Jul: The [**Recognizers-Text** project](https://github.com/microsoft/Recognizers-Text) reached over **3 million** package downloads (across NuGet/npm/PyPI)! 
 * 2021-May: **ReTraCk** has reached **\#1** in the [Generalizable Question Answering (GrailQA) leaderboard](https://dki-lab.github.io/GrailQA/) for knowledge base QA (KBQA).
 * 2020-Dec: The [**Recognizers-Text** project](https://github.com/microsoft/Recognizers-Text) reached over **2 million** package downloads (across NuGet/npm/PyPI)! 
 * 2020-Nov: The [**LinkingPark**](https://www.microsoft.com/en-us/research/publication/linkingpark-an-integrated-approach-for-semantic-table-interpretation/) system, developed in partnership between the Knowledge Computing group at MSRA and our collaborators in MSR Cambridge, has gotten 2nd place in the [SemTab 2020 challenge (Semantic Web Challenge on Tabular Data to Knowledge Graph Matching)](https://www.cs.ox.ac.uk/isg/challenges/sem-tab/2020/results.html)!
