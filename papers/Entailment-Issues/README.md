@@ -180,12 +180,13 @@ This is due to randomness coming from pytorch training. The small expected varia
 
 ## Acknowledgement
 
-We thank the original authors for sharing their code, data or model:
+This repository leverages open-sourced work from multiple sources. We thank the original authors of the repositories below for sharing their code, data, and models.
 
-[https://github.com/huggingface/transformers/tree/v2.5.1/examples](https://github.com/huggingface/transformers/tree/v2.5.1/examples)   
-[https://github.com/yinwenpeng/BenchmarkingZeroShot](https://github.com/yinwenpeng/BenchmarkingZeroShot)    
-[https://github.com/chrisc36/debias](https://github.com/chrisc36/debias)   
-[https://github.com/UKPLab/emnlp2020-debiasing-unknown](https://github.com/UKPLab/emnlp2020-debiasing-unknown)
+* [https://github.com/huggingface/transformers/tree/v2.5.1/examples](https://github.com/huggingface/transformers/tree/v2.5.1/examples);
+* [https://github.com/yinwenpeng/BenchmarkingZeroShot](https://github.com/yinwenpeng/BenchmarkingZeroShot);
+* [https://github.com/chrisc36/debias](https://github.com/chrisc36/debias);
+* [https://github.com/UKPLab/emnlp2020-debiasing-unknown](https://github.com/UKPLab/emnlp2020-debiasing-unknown).
+
 
 ## Contributing
 
