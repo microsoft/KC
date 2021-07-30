@@ -1,0 +1,24 @@
+["RateBook", "SearchScreeningEvent", "PlayMusic", "GetWeather", "SearchCreativeWork", "AddToPlaylist", "BookRestaurant"]
+{
+    "RateBook": [
+        "i want to rate a book ."
+    ],
+    "SearchScreeningEvent": [
+        "i want to search screening event ."
+    ],
+    "PlayMusic": [
+        "i want to play music ."
+    ],
+    "GetWeather": [
+        "i want to get weather ."
+    ],
+    "SearchCreativeWork": [
+        "i want to search creative work ."
+    ],
+    "AddToPlaylist": [
+        "i want to add to playlist ."
+    ],
+    "BookRestaurant": [
+        "i want to book a restaurant ."
+    ]
+}

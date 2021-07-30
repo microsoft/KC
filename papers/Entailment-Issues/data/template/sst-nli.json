@@ -1,0 +1,9 @@
+["positive", "negative"]
+{
+    "positive": [
+        "the movie is great ."
+    ],
+    "negative": [
+        "the movie is terrible ."
+    ]
+}
