@@ -1,5 +1,7 @@
 '''
 The code is adapted from https://github.com/chrisc36/debias/blob/master/debias/preprocessing/build_mnli_bias_only.py
+
+License: Apache License 2.0
 '''
 
 import argparse
