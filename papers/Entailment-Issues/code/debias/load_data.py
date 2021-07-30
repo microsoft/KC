@@ -1,5 +1,7 @@
 '''
 The code is adapted from https://github.com/UKPLab/emnlp2020-debiasing-unknown/blob/main/src/train_distill_bert.py
+
+License: Apache License 2.0
 '''
 
 import os
