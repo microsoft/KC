@@ -1,0 +1,71 @@
+.team-area{
+    background: #FFF7F5;
+    .single-team{
+        .team-img{
+            overflow: hidden;
+            img{
+                width: 100%;
+                transform:scale(1);
+                transition: all 0.6s ease-out 0s;
+            }
+        }
+        .team-caption{
+            padding: 30px 20px 30px 50px;
+            background: #fff;
+            border: 1px solid #ffeff9;
+            border-top: 0;
+            @include transition(.4s);
+            span{
+                color: #a5a5a5;
+                font-size: 14px;
+                font-weight: 300;
+                font-family:$font_1;
+                display: block;
+                margin-bottom: 30px;
+            }
+            h3{
+                a{
+                    color: #161e46;
+                    font-weight: 700;
+                    font-size: 25px;
+                    margin-bottom: 10px;
+                    display: block;
+                }
+            }
+        }
+    }
+}
+.single-team:hover .team-img img {
+	transform:scale(1.05);
+}
+
+.brand-area{
+    background:#f7f7f7;
+    .single-brand.slick-slide {
+        opacity: .7;
+    }
+}
+
+// footer social
+.team-social{
+    a{
+        color: $theme-color;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        font-size: 14px;
+        line-height: 40px;
+        display: inline-block;
+        text-align: center;
+        margin-right: 8px;
+        border: 1px solid $theme-color;
+        &:hover{
+            color: #fff;
+            border: 1px solid transparent;
+            background: $theme-color;
+        }
+        i{
+                display:inline-block;
+        }
+    }
+}

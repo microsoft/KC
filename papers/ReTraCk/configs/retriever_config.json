@@ -1,0 +1,19 @@
+{
+  "grailqa_ner_model_path": "./KBSchema/EntityLinking/NERModel/GrailQA",
+  "webqsp_ner_model_path": "./KBSchema/EntityLinking/NERModel/WebQSP",
+  "grailqa_ner_port": 8009,
+  "webqsp_ner_port": 8010,
+  "prior_path": "./KBSchema/EntityLinking/AliasMap/ClueWeb_alias_map_title_tok_prior_convert.pkl",
+  "log_fn": "./Output/logs/log.txt",
+  "port": 6100,
+  "topk": 3,
+  "schema_meta_info_fn": "./KBSchema/EntityLinking/schema_meta_info.pkl",
+  "world": "GrailQA",
+  "kb_store_host": "127.0.1.1",
+  "entity_meta_port": 6386,
+  "in_relation_port": 6387,
+  "out_relation_port": 6388,
+  "dense_retriever_uri": "http://localhost:6200/api/schema",
+  "schema_query_mode": "offline",
+  "schema_service_config_path": "./configs/schema_service_config.json"
+}

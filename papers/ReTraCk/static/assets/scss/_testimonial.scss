@@ -1,0 +1,140 @@
+.testimonial-area{
+    .testimonial-caption{
+        .testimonial-top-cap{
+             img{
+                margin-bottom: 50px;
+                width: auto;
+                display: inline-block;
+                @media #{$md}{
+                    margin-bottom: 30px;
+                }
+                @media #{$xs}{
+                    margin-bottom: 30px;
+                }
+            }
+             p{
+                font-weight: 400;
+                line-height: 1.6;
+                font-size: 20px;
+                margin-bottom: 30px;
+               // font-size
+                @media #{$lg}{
+                    font-size: 18px;
+                    line-height: 1.6;
+                    font-size: 16px;
+                }
+                // margin
+                @media #{$md}{
+                    margin-bottom: 25px;
+                    font-size: 16px;
+                    line-height: 1.7;
+                    padding: 0 ;
+                    font-size: 17px;
+                }
+                @media #{$sm}{
+                    margin-bottom: 25px;
+                    font-size: 16px;
+                    line-height: 1.7;
+                    padding: 0 5px;
+                    font-size: 18px;
+                }
+                @media #{$xs}{
+                    margin-bottom: 25px;
+                    font-size: 16px;
+                    line-height: 1.7;
+                    padding: 0 5px;
+                    font-size: 18px;
+                }
+            }
+        }
+        .testimonial-founder{
+            .founder-img{
+                 img{
+                    // margin-bottom:30px;
+                    display: inline-block;
+                    font-weight: 300;
+                    width: 89px;
+                }
+                span{
+                    font-size: 21px;
+                    font-weight: 500;
+                    line-height: 1;
+                    display: block;
+                    margin-bottom: 10px;
+                    font-family: $font_1;
+                }
+            }
+        }
+    }
+        
+    /* slick-dots button Start */
+    .dot-style .slick-dots {
+        text-align: center;
+        bottom: -49px;
+        left: 0;
+        right: 0;
+        position: absolute;
+    }
+    .dot-style .slick-dots li {
+        display: inline-block;
+    }
+    .dot-style .slick-dots button {
+        text-indent: -100000px;
+        height: 9px;
+        width: 9px;
+        border: 0;
+        padding: 0;
+        margin:0 4px;
+        cursor: pointer;
+        border-radius:50%;
+        background:red;
+    }
+    .dot-style .slick-dots  .slick-active button{
+        background: #fff;
+    }
+
+    /* End slick-dots button*/
+
+    /* Arrow Start*/
+        button.slick-arrow {
+            position: absolute;
+            left: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 0;
+            padding: 0;
+            z-index: 2;
+            height: 50px;
+            width: 50px;
+            line-height: 50px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 20px;
+            @include transition(.3s);
+            color: #616373;
+            background: none;
+            margin: 0 auto;
+            bottom: 0;   
+            border: 1px solid #616373;
+            &:hover{
+                border: 1px solid #f04e3c;
+                color:#f04e3c;
+            }
+        } 
+        button.slick-next {
+            left: auto;
+            right: -60px;
+        }
+        button i{
+            font-size: 13px;
+            position: relative;
+            top: -3px;
+        }
+
+    /* Arrow End*/
+}
+
+.slick-initialized .slick-slide {
+    outline: 0;
+}
+

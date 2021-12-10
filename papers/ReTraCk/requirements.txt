@@ -1,0 +1,42 @@
+# Semantic Parser
+numpy==1.19.2
+torch==1.6.0
+allennlp==1.2.2
+allennlp_semparse
+editdistance==0.5.3
+dill
+gevent
+#azureml-sdk==1.19.0
+
+# Dense Retriever
+pysolr==3.8.1
+emoji==0.5.3
+regex==2019.8.19
+matplotlib==3.1.0
+segtok==1.5.7
+flair==0.6.1
+colorama==0.4.3
+termcolor==1.1.0
+faiss-cpu>=1.6.1
+
+# BERT-NER
+pytorch-transformers==1.2.0
+
+# Eval and training
+seqeval==0.0.5
+tqdm
+prettytable
+
+# Tokenization
+nltk==3.4.5
+
+# REST API
+Flask==1.1.1
+Flask-Cors==3.0.8
+regex
+requests
+ujson
+overrides
+networkx==2.5
+SPARQLWrapper==1.8.5
+redis

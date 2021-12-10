@@ -1,0 +1,10 @@
+{
+  "world": "grailQA",
+  "model_path": "./Parser/grailqa_model.tar.gz",
+  "port":  "6010",
+  "semantic_constrained_path": "./Parser/constraint/SRO_COM_SC.filter.pkl",
+  "literal_relation_path": "./Parser/constraint/Literal_Relation.pkl",
+  "schema_retriever_uri": "http://gpu16.kcgpu.com:6100/kbqa/api/v1.0/retriever",
+  "sparql_endpoint_uri": "http://gpu12.kcgpu.com:8890/sparql/",
+  "cuda_device": "-1"
+}
