@@ -1,0 +1,1642 @@
+diff --git blink/biencoder/biencoder.py blink/biencoder/biencoder.py
+index 7957262..cfa64f8 100644
+--- blink/biencoder/biencoder.py
++++ blink/biencoder/biencoder.py
+@@ -19,8 +19,10 @@ from pytorch_transformers.modeling_bert import (
+ 
+ from pytorch_transformers.tokenization_bert import BertTokenizer
+ 
+-from blink.common.ranker_base import BertEncoder, get_model_obj
+-from blink.common.optimizer import get_bert_optimizer
++
++
++from retriever.schema_retriever.dense_retriever.blink.common.ranker_base import BertEncoder, get_model_obj
++from retriever.schema_retriever.dense_retriever.blink.common.optimizer import get_bert_optimizer
+ 
+ 
+ def load_biencoder(params):
+@@ -75,7 +77,7 @@ class BiEncoderRanker(torch.nn.Module):
+         super(BiEncoderRanker, self).__init__()
+         self.params = params
+         self.device = torch.device(
+-            "cuda" if torch.cuda.is_available() and not params["no_cuda"] else "cpu"
++            "cuda" if torch.cuda.is_available()  else "cpu"
+         )
+         self.n_gpu = torch.cuda.device_count()
+         # init tokenizer
+@@ -89,7 +91,7 @@ class BiEncoderRanker(torch.nn.Module):
+         self.build_model()
+         model_path = params.get("path_to_model", None)
+         if model_path is not None:
+-            self.load_model(model_path)
++            self.load_model(model_path, not torch.cuda.is_available())
+ 
+         self.model = self.model.to(self.device)
+         self.data_parallel = params.get("data_parallel")
+@@ -98,7 +100,7 @@ class BiEncoderRanker(torch.nn.Module):
+ 
+     def load_model(self, fname, cpu=False):
+         if cpu:
+-            state_dict = torch.load(fname, map_location=lambda storage, location: "cpu")
++            state_dict = torch.load(fname, map_location=torch.device('cpu'))
+         else:
+             state_dict = torch.load(fname)
+         self.model.load_state_dict(state_dict)
+@@ -163,8 +165,8 @@ class BiEncoderRanker(torch.nn.Module):
+         # Candidate encoding is given, do not need to re-compute
+         # Directly return the score of context encoding and candidate encoding
+         if cand_encs is not None:
+-            return embedding_ctxt.mm(cand_encs.t())
+-
++            return embedding_ctxt.mm(cand_encs.t().cuda())
++        
+         # Train time. We compare with all elements of the batch
+         token_idx_cands, segment_idx_cands, mask_cands = to_bert_input(
+             cand_vecs, self.NULL_IDX
+diff --git blink/biencoder/data_process.py blink/biencoder/data_process.py
+index b0c0c23..3a0ba36 100644
+--- blink/biencoder/data_process.py
++++ blink/biencoder/data_process.py
+@@ -12,8 +12,8 @@ from torch.utils.data import DataLoader, TensorDataset
+ 
+ from pytorch_transformers.tokenization_bert import BertTokenizer
+ 
+-from blink.biencoder.zeshel_utils import world_to_id
+-from blink.common.params import ENT_START_TAG, ENT_END_TAG, ENT_TITLE_TAG
++from retriever.schema_retriever.dense_retriever.blink.biencoder.zeshel_utils import world_to_id
++from retriever.schema_retriever.dense_retriever.blink.common.params import ENT_START_TAG, ENT_END_TAG, ENT_TITLE_TAG
+ 
+ 
+ def select_field(data, key1, key2=None):
+@@ -60,7 +60,8 @@ def get_context_representation(
+     context_tokens = ["[CLS]"] + context_tokens + ["[SEP]"]
+     input_ids = tokenizer.convert_tokens_to_ids(context_tokens)
+     padding = [0] * (max_seq_length - len(input_ids))
+-    input_ids += padding
++    input_ids += padding + padding[:10]
++    input_ids = input_ids[:max_seq_length]
+     assert len(input_ids) == max_seq_length
+ 
+     return {
+@@ -88,7 +89,8 @@ def get_candidate_representation(
+ 
+     input_ids = tokenizer.convert_tokens_to_ids(cand_tokens)
+     padding = [0] * (max_seq_length - len(input_ids))
+-    input_ids += padding
++    input_ids += padding + padding[:10]
++    input_ids = input_ids[:max_seq_length]
+     assert len(input_ids) == max_seq_length
+ 
+     return {
+diff --git blink/biencoder/eval_biencoder.py blink/biencoder/eval_biencoder.py
+index aa95897..5a79f25 100644
+--- blink/biencoder/eval_biencoder.py
++++ blink/biencoder/eval_biencoder.py
+@@ -16,12 +16,12 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, Tenso
+ 
+ from pytorch_transformers.tokenization_bert import BertTokenizer
+ 
+-from blink.biencoder.biencoder import BiEncoderRanker
+-import blink.biencoder.data_process as data
+-import blink.biencoder.nn_prediction as nnquery
+-import blink.candidate_ranking.utils as utils
+-from blink.biencoder.zeshel_utils import WORLDS, load_entity_dict_zeshel, Stats
+-from blink.common.params import BlinkParser
++from retriever.schema_retriever.dense_retriever.blink.biencoder.biencoder import BiEncoderRanker
++import retriever.schema_retriever.dense_retriever.blink.biencoder.data_process as data
++import retriever.schema_retriever.dense_retriever.blink.biencoder.nn_prediction as nnquery
++import retriever.schema_retriever.dense_retriever.blink.candidate_ranking.utils as utils
++from retriever.schema_retriever.dense_retriever.blink.biencoder.zeshel_utils import WORLDS, load_entity_dict_zeshel, Stats
++from retriever.schema_retriever.dense_retriever.blink.common.params import BlinkParser
+ 
+ 
+ def load_entity_dict(logger, params, is_zeshel):
+@@ -137,7 +137,7 @@ def encode_candidate(
+                 encode_batch_size,
+                 silent,
+                 logger,
+-                is_zeshel=False,
++                is_zeshel = False,
+             )
+             cand_encode_dict[src] = cand_pool_encode
+         return cand_encode_dict
+@@ -238,19 +238,20 @@ def main(params):
+ 
+     if candidate_encoding is None:
+         candidate_encoding = encode_candidate(
++            params,
+             reranker,
+             candidate_pool,
+             params["encode_batch_size"],
+             silent=params["silent"],
+             logger=logger,
+-            is_zeshel=params.get("zeshel", None)
++            is_zeshel = params.get("zeshel", None)
+             
+         )
+ 
+         if cand_encode_path is not None:
+             # Save candidate encoding to avoid re-compute
+             logger.info("Saving candidate encoding to file " + cand_encode_path)
+-            torch.save(candidate_encoding, cand_encode_path)
++            torch.save(cand_encode_path, candidate_encoding)
+ 
+ 
+     test_samples = utils.read_dataset(params["mode"], params["data_path"])
+@@ -270,9 +271,9 @@ def main(params):
+     test_dataloader = DataLoader(
+         test_tensor_data, 
+         sampler=test_sampler, 
+-        batch_size=params["eval_batch_size"]
++        batch_size=params["encode_batch_size"]
+     )
+-    
++   
+     save_results = params.get("save_topk_result")
+     new_data = nnquery.get_topk_predictions(
+         reranker,
+@@ -287,13 +288,10 @@ def main(params):
+     )
+ 
+     if save_results: 
+-        save_data_dir = os.path.join(
+-            params['output_path'],
+-            "top%d_candidates" % params['top_k'],
++        save_data_path = os.path.join(
++            params['output_path'], 
++            'candidates_%s_top%d.t7' % (params['mode'], params['top_k'])
+         )
+-        if not os.path.exists(save_data_dir):
+-            os.makedirs(save_data_dir)
+-        save_data_path = os.path.join(save_data_dir, "%s.t7" % params['mode'])
+         torch.save(new_data, save_data_path)
+ 
+ 
+@@ -305,9 +303,4 @@ if __name__ == "__main__":
+     print(args)
+ 
+     params = args.__dict__
+-
+-    mode_list = params["mode"].split(',')
+-    for mode in mode_list:
+-        new_params = params
+-        new_params["mode"] = mode
+-        main(new_params)
++    main(params)
+diff --git blink/biencoder/nn_prediction.py blink/biencoder/nn_prediction.py
+index eab90a8..4132c0d 100644
+--- blink/biencoder/nn_prediction.py
++++ blink/biencoder/nn_prediction.py
+@@ -10,8 +10,8 @@ import logging
+ import torch
+ from tqdm import tqdm
+ 
+-import blink.candidate_ranking.utils as utils
+-from blink.biencoder.zeshel_utils import WORLDS, Stats
++import retriever.schema_retriever.dense_retriever.blink.candidate_ranking.utils as utils
++from retriever.schema_retriever.dense_retriever.blink.biencoder.zeshel_utils import WORLDS, Stats
+ 
+ 
+ def get_topk_predictions(
+@@ -36,7 +36,6 @@ def get_topk_predictions(
+     nn_context = []
+     nn_candidates = []
+     nn_labels = []
+-    nn_worlds = []
+     stats = {}
+ 
+     if is_zeshel:
+@@ -47,8 +46,6 @@ def get_topk_predictions(
+         candidate_pool = [candidate_pool]
+         cand_encode_list = [cand_encode_list]
+ 
+-    logger.info("World size : %d" % world_size)
+-
+     for i in range(world_size):
+         stats[i] = Stats(top_k)
+     
+@@ -97,7 +94,6 @@ def get_topk_predictions(
+             nn_context.append(context_input[i].cpu().tolist())
+             nn_candidates.append(cur_candidates.cpu().tolist())
+             nn_labels.append(pointer)
+-            nn_worlds.append(src)
+ 
+     res = Stats(top_k)
+     for src in range(world_size):
+@@ -119,9 +115,6 @@ def get_topk_predictions(
+         'candidate_vecs': nn_candidates,
+         'labels': nn_labels,
+     }
+-
+-    if is_zeshel:
+-        nn_data["worlds"] = torch.LongTensor(nn_worlds)
+     
+     return nn_data
+ 
+diff --git blink/biencoder/train_biencoder.py blink/biencoder/train_biencoder.py
+index c39450d..34684fa 100644
+--- blink/biencoder/train_biencoder.py
++++ blink/biencoder/train_biencoder.py
+@@ -25,16 +25,15 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, Tenso
+ from pytorch_transformers.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
+ from pytorch_transformers.optimization import WarmupLinearSchedule
+ from pytorch_transformers.tokenization_bert import BertTokenizer
+-from pytorch_transformers.modeling_utils import WEIGHTS_NAME
+ 
+-from blink.biencoder.biencoder import BiEncoderRanker, load_biencoder
++from retriever.schema_retriever.dense_retriever.blink.biencoder.biencoder import BiEncoderRanker
+ import logging
+ 
+-import blink.candidate_ranking.utils as utils
+-import blink.biencoder.data_process as data
+-from blink.biencoder.zeshel_utils import DOC_PATH, WORLDS, world_to_id
+-from blink.common.optimizer import get_bert_optimizer
+-from blink.common.params import BlinkParser
++import retriever.schema_retriever.dense_retriever.blink.candidate_ranking.utils as utils
++import retriever.schema_retriever.dense_retriever.blink.biencoder.data_process as data
++from retriever.schema_retriever.dense_retriever.blink.biencoder.zeshel_utils import DOC_PATH, WORLDS, world_to_id
++from retriever.schema_retriever.dense_retriever.blink.common.optimizer import get_bert_optimizer
++from retriever.schema_retriever.dense_retriever.blink.common.params import BlinkParser
+ 
+ 
+ logger = None
+@@ -56,20 +55,23 @@ def evaluate(
+     eval_accuracy = 0.0
+     nb_eval_examples = 0
+     nb_eval_steps = 0
+-
+     for step, batch in enumerate(iter_):
+         batch = tuple(t.to(device) for t in batch)
+-        context_input, candidate_input, _, _ = batch
++        context_input, candidate_input, to_save = batch
++
+         with torch.no_grad():
+             eval_loss, logits = reranker(context_input, candidate_input)
+ 
+         logits = logits.detach().cpu().numpy()
++        #logits_to_save=np.transpose(logits)
+         # Using in-batch negatives, the label ids are diagonal
+         label_ids = torch.LongTensor(
+                 torch.arange(params["eval_batch_size"])
+         ).numpy()
+-        tmp_eval_accuracy, _ = utils.accuracy(logits, label_ids)
+-
++        tmp_eval_accuracy = utils.accuracy(logits, label_ids)
++        #exp={"candidate input":candidate_input.tolist()
++                #}
++        #f.write(json.dumps(exp)+"\n")
+         eval_accuracy += tmp_eval_accuracy
+ 
+         nb_eval_examples += context_input.size(0)
+@@ -117,6 +119,8 @@ def main(params):
+     tokenizer = reranker.tokenizer
+     model = reranker.model
+ 
++    # utils.save_model(model, tokenizer, model_output_path)
++
+     device = reranker.device
+     n_gpu = reranker.n_gpu
+ 
+@@ -145,7 +149,8 @@ def main(params):
+         torch.cuda.manual_seed_all(seed)
+ 
+     # Load train data
+-    train_samples = utils.read_dataset("train", params["data_path"])
++    ft = open(params["data_path"]+".train", 'r')
++    train_samples =json.load(ft)
+     logger.info("Read %d train samples." % len(train_samples))
+ 
+     train_data, train_tensor_data = data.process_mention_data(
+@@ -169,7 +174,8 @@ def main(params):
+ 
+     # Load eval data
+     # TODO: reduce duplicated code here
+-    valid_samples = utils.read_dataset("valid", params["data_path"])
++    fd = open(params["data_path"]+".test", 'r')
++    valid_samples = json.load(fd)
+     logger.info("Read %d valid samples." % len(valid_samples))
+ 
+     valid_data, valid_tensor_data = data.process_mention_data(
+@@ -225,7 +231,7 @@ def main(params):
+ 
+         for step, batch in enumerate(iter_):
+             batch = tuple(t.to(device) for t in batch)
+-            context_input, candidate_input, _, _ = batch
++            context_input, candidate_input, _ = batch
+             loss, _ = reranker(context_input, candidate_input)
+ 
+             # if n_gpu > 1:
+@@ -292,11 +298,8 @@ def main(params):
+     # save the best model in the parent_dir
+     logger.info("Best performance in epoch: {}".format(best_epoch_idx))
+     params["path_to_model"] = os.path.join(
+-        model_output_path, 
+-        "epoch_{}".format(best_epoch_idx),
+-        WEIGHTS_NAME,
++        model_output_path, "epoch_{}".format(best_epoch_idx)
+     )
+-    reranker = load_biencoder(params)
+     utils.save_model(reranker.model, tokenizer, model_output_path)
+ 
+     if params["evaluate"]:
+@@ -307,7 +310,6 @@ def main(params):
+ if __name__ == "__main__":
+     parser = BlinkParser(add_model_args=True)
+     parser.add_training_args()
+-    parser.add_eval_args()
+ 
+     # args = argparse.Namespace(**params)
+     args = parser.parse_args()
+diff --git blink/biencoder/zeshel_utils.py blink/biencoder/zeshel_utils.py
+index d3dc359..7c97928 100644
+--- blink/biencoder/zeshel_utils.py
++++ blink/biencoder/zeshel_utils.py
+@@ -35,18 +35,11 @@ world_to_id = {src : k for k, src in enumerate(WORLDS)}
+ 
+ def load_entity_dict_zeshel(logger, params):
+     entity_dict = {}
+-    # different worlds in train/valid/test
+-    if params["mode"] == "train":
+-        start_idx = 0
+-        end_idx = 8
+-    elif params["mode"] == "valid":
+-        start_idx = 8
+-        end_idx = 12
+-    else:
+-        start_idx = 12
+-        end_idx = 16
+-    # load data
+-    for i, src in enumerate(WORLDS[start_idx:end_idx]):
++    for i, src in enumerate(WORLDS):
++        if i < 8 or i > 11:
++            continue
++        #if i >=8 :
++        #    continue
+         fname = DOC_PATH + src + ".json"
+         cur_dict = {}
+         doc_list = []
+diff --git blink/build_faiss_index.py blink/build_faiss_index.py
+index 5ed382e..07c70a3 100644
+--- blink/build_faiss_index.py
++++ blink/build_faiss_index.py
+@@ -11,17 +11,16 @@ import os
+ import time
+ import torch
+ 
+-from blink.indexer.faiss_indexer import DenseFlatIndexer, DenseHNSWFlatIndexer
+-import blink.candidate_ranking.utils as utils
++from retriever.schema_retriever.dense_retriever.blink.indexer.faiss_indexer import DenseFlatIndexer, DenseHNSWFlatIndexer
++import retriever.schema_retriever.dense_retriever.blink.candidate_ranking.utils as utils
+ 
+ logger = utils.get_logger()
+ 
+ def main(params): 
+     output_path = params["output_path"]
+-    output_dir, _ = os.path.split(output_path)
+-    if not os.path.exists(output_dir):
+-        os.makedirs(output_dir)
+-    logger = utils.get_logger(output_dir)
++    if not os.path.exists(output_path):
++        os.makedirs(output_path)
++    logger = utils.get_logger(output_path)
+ 
+     logger.info("Loading candidate encoding from path: %s" % params["candidate_encoding"])
+     candidate_encoding = torch.load(params["candidate_encoding"])
+@@ -52,7 +51,7 @@ if __name__ == '__main__':
+     )
+     parser.add_argument(
+         "--candidate_encoding",
+-        default="models/all_entities_large.t7",
++        default="/private/home/ledell/BLINK-Internal/models/all_entities_large.t7",
+         type=str,
+         help="file path for candidte encoding.",
+     )
+diff --git blink/candidate_generation.py blink/candidate_generation.py
+index 9840312..a235de4 100644
+--- blink/candidate_generation.py
++++ blink/candidate_generation.py
+@@ -9,7 +9,7 @@ import os
+ import pysolr
+ import sys
+ 
+-import blink.candidate_retrieval.utils as utils
++import retriever.schema_retriever.dense_retriever.blink.candidate_retrieval.utils as utils
+ 
+ 
+ def get_model(params):
+diff --git blink/candidate_ranking/train.py blink/candidate_ranking/train.py
+index b5ab0ad..d8e557f 100644
+--- blink/candidate_ranking/train.py
++++ blink/candidate_ranking/train.py
+@@ -29,8 +29,8 @@ from torch.utils.data.distributed import DistributedSampler
+ from pytorch_transformers.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
+ from pytorch_transformers.tokenization_bert import BertTokenizer
+ 
+-import blink.candidate_retrieval.utils
+-from blink.candidate_ranking.bert_reranking import BertForReranking
++import retriever.schema_retriever.dense_retriever.blink.candidate_retrieval.utils
++from retriever.schema_retriever.dense_retriever.blink.candidate_ranking.bert_reranking import BertForReranking
+ import logging
+ import utils
+ from evaluate import evaluate_model_on_dataset, evaluate
+diff --git blink/candidate_ranking/utils.py blink/candidate_ranking/utils.py
+index be633ad..efb945f 100644
+--- blink/candidate_ranking/utils.py
++++ blink/candidate_ranking/utils.py
+@@ -17,8 +17,8 @@ from collections import OrderedDict
+ from pytorch_transformers.modeling_utils import CONFIG_NAME, WEIGHTS_NAME
+ from tqdm import tqdm
+ 
+-from blink.candidate_ranking.bert_reranking import BertReranker
+-from blink.biencoder.biencoder import BiEncoderRanker
++from retriever.schema_retriever.dense_retriever.blink.candidate_ranking.bert_reranking import BertReranker
++from retriever.schema_retriever.dense_retriever.blink.biencoder.biencoder import BiEncoderRanker
+ 
+ 
+ def read_dataset(dataset_name, preprocessed_json_data_parent_folder, debug=False):
+@@ -85,7 +85,15 @@ def eval_precision_bm45_dataloader(dataloader, ks=[1, 5, 10], number_of_samples=
+ 
+ def accuracy(out, labels):
+     outputs = np.argmax(out, axis=1)
+-    return np.sum(outputs == labels), outputs == labels
++    #outputs = np.argsort(out, -1)
++    #s = 0
++    #for x,y in zip(outputs, labels):
++     #   if np.isin(y, x[-5:]):
++      #      s+=1
++    #return s
++    #print ("outputs:",outputs)
++    #print ("labels:",labels)
++    return np.sum(outputs == labels)
+ 
+ 
+ def remove_module_from_state_dict(state_dict):
+diff --git blink/candidate_retrieval/data_ingestion.py blink/candidate_retrieval/data_ingestion.py
+index a4510f4..b12258f 100644
+--- blink/candidate_retrieval/data_ingestion.py
++++ blink/candidate_retrieval/data_ingestion.py
+@@ -127,22 +127,22 @@ if args.min_tokens != 0:
+     print("Number of docs AFTER removal:", len(title2data))
+     print("")
+ 
+-# Remove disambiguation pages
++# Remove disambiguator pages
+ if args.remove_disambiguation_pages:
+-    print("Remove disambiguation pages")
++    print("Remove disambiguator pages")
+     print("Number of docs BEFORE removal:", len(title2data))
+     titles_to_delete = []
+ 
+     for title in title2data:
+         parsed_obj = title2data[title]
+-        if ("disambiguation" in title) or ("Disambiguation" in title):
++        if ("disambiguator" in title) or ("Disambiguation" in title):
+             titles_to_delete.append(title)
+         else:
+             if (parsed_obj.get("wikidata_info", None) is not None) and (
+                 parsed_obj["wikidata_info"].get("description", None) is not None
+             ):
+                 wikidata_info = parsed_obj["wikidata_info"]
+-                if ("disambiguation page" in wikidata_info["description"]) or (
++                if ("disambiguator page" in wikidata_info["description"]) or (
+                     "Disambiguation page" in wikidata_info["description"]
+                 ):
+                     titles_to_delete.append(title)
+diff --git blink/candidate_retrieval/json_data_generation.py blink/candidate_retrieval/json_data_generation.py
+index 1c17f41..f84bdfc 100644
+--- blink/candidate_retrieval/json_data_generation.py
++++ blink/candidate_retrieval/json_data_generation.py
+@@ -12,7 +12,7 @@ import sys
+ import os
+ import io
+ 
+-import blink.candidate_retrieval.utils as utils
++import retriever.schema_retriever.dense_retriever.blink.candidate_retrieval.utils as utils
+ 
+ from tqdm import tqdm
+ 
+diff --git blink/candidate_retrieval/scripts/create_solr_collections.sh b/./BLINK/blink/candidate_retrieval/scripts/create_solr_collections.sh
+deleted file mode 100644
+index 3c14a88..0000000
+--- blink/candidate_retrieval/scripts/create_solr_collections.sh
++++ /dev/null
+@@ -1,15 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-
+-for collection_name in $@
+-do
+-    echo "=====Creating collection with name '$collection_name'====="
+-    sudo su - solr -c "/opt/solr/bin/solr create -c $collection_name -n data_driven_schema_configs"
+-done
+diff --git blink/candidate_retrieval/scripts/generate_wiki2wikidata_mapping.sh b/./BLINK/blink/candidate_retrieval/scripts/generate_wiki2wikidata_mapping.sh
+deleted file mode 100644
+index 42d3bc0..0000000
+--- blink/candidate_retrieval/scripts/generate_wiki2wikidata_mapping.sh
++++ /dev/null
+@@ -1,22 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-
+-data_folder_path='data/KB_data'
+-en_index_precomputed="$data_folder_path/index_enwiki.db"
+-
+-mkdir -p $data_folder_path
+-
+-if [[ ! -f $en_index_precomputed ]]; then
+-  echo "downloading $en_index_precomputed"
+-  wget https://public.ukp.informatik.tu-darmstadt.de/wikimapper/index_enwiki-20190420.db -O $en_index_precomputed
+-fi
+-
+-# Generate mappings between wikipedia and wikidata ids, and titles and wikidata ids
+-python blink/candidate_retrieval/generate_wiki2wikidata_mappings.py --input_file $en_index_precomputed --output_folder $data_folder_path
+\ No newline at end of file
+diff --git blink/candidate_retrieval/scripts/get_processed_data.sh b/./BLINK/blink/candidate_retrieval/scripts/get_processed_data.sh
+deleted file mode 100644
+index c8ad1ec..0000000
+--- blink/candidate_retrieval/scripts/get_processed_data.sh
++++ /dev/null
+@@ -1,58 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-if [ $# -le 0 ]
+-  then
+-    echo "Usage: ./get_processed_data.sh data_folder_path"
+-    exit 1
+-fi
+-
+-data_folder_path=$1/KB_data
+-mkdir -p $data_folder_path
+-
+-wikipedia_xml_dump="$data_folder_path/enwiki-pages-articles.xml.bz2"
+-wikidata_json_dump="$data_folder_path/wikidata-all.json.bz2"
+-en_index_precomputed="$data_folder_path/index_enwiki.db"
+-
+-if [[ ! -f $wikipedia_xml_dump ]]; then
+-  echo "downloading $wikipedia_xml_dump"
+-  wget http://dl.fbaipublicfiles.com/BLINK/enwiki-pages-articles.xml.bz2 -O $wikipedia_xml_dump
+-fi
+-
+-if [[ ! -f $wikidata_json_dump ]]; then
+-  echo "downloading $wikidata_json_dump"
+-  wget https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2 -O $wikidata_json_dump
+-fi
+-
+-if [[ ! -f $en_index_precomputed ]]; then
+-  echo "downloading $en_index_precomputed"
+-  wget https://public.ukp.informatik.tu-darmstadt.de/wikimapper/index_enwiki-20190420.db -O $en_index_precomputed
+-fi
+-
+-echo "Processing wikipedia dump for text"
+-bash blink/candidate_retrieval/scripts/process_wikipedia_dump.sh $wikipedia_xml_dump $data_folder_path
+-
+-echo "Processing wikipedia dump for links"
+-bash blink/candidate_retrieval/scripts/process_wikipedia_dump_links.sh $wikipedia_xml_dump $data_folder_path
+-
+-echo "Processing wikidata dump"
+-bash blink/candidate_retrieval/scripts/process_wikidata_dump.sh $wikidata_json_dump $data_folder_path
+-
+-echo "Linking wikipedia with wikidata"
+-bash blink/candidate_retrieval/scripts/link_wikipedia_and_wikidata.sh $en_index_precomputed $data_folder_path
+-
+-echo "Enrich linked data with the number of tokens and number of incoming links"
+-python blink/candidate_retrieval/enrich_data.py --output $data_folder_path
+-
+-echo "Create a dump that also contains the first 10 sentences numbered and given as separate fields"
+-python blink/candidate_retrieval/process_intro_sents.py --output $data_folder_path
+-
+-echo "The data has been processed and dumped at the folder: ${data_folder_path}"
+-
+-
+diff --git blink/candidate_retrieval/scripts/ingest_data.sh b/./BLINK/blink/candidate_retrieval/scripts/ingest_data.sh
+deleted file mode 100644
+index f295c98..0000000
+--- blink/candidate_retrieval/scripts/ingest_data.sh
++++ /dev/null
+@@ -1,93 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-
+-if [ $# -le 1 ]
+-  then
+-    echo "Example usage:"
+-    echo "bash ingestion_data.sh --processed_data_file_path /scratch/martinjosifoski/data/title2enriched_parsed_obj_plus.p --collection_name wikipedia_plus"
+-    echo "bash ingestion_data.sh --processed_data_file_path /scratch/martinjosifoski/data/title2enriched_parsed_obj_plus.p --collection_name wikipedia_plus --min_tokens 20 --add_sentence_data --remove_disambiguation_pages"
+-    exit 1
+-fi
+-
+-NONRECOVERED=()
+-
+-processed_data_file_path=""
+-collection_name=""
+-collection_name_only=""
+-min_tokens=""
+-add_sentence_data=""
+-remove_disambiguation_pages=""
+-
+-while [[ $# -gt 0 ]]
+-do
+-key="$1"
+-
+-case $key in
+-    --processed_data_file_path)
+-    processed_data_file_path="--processed_data_file_path $2"
+-    shift # past argument
+-    shift # past value
+-    ;;
+-    --collection_name)
+-    collection_name="--collection_name $2"
+-    collection_name_only="$2"
+-    shift # past argument
+-    shift # past value
+-    ;;
+-    --min_tokens)
+-    min_tokens="--min_tokens $2"
+-    shift # past argument
+-    shift # past value
+-    ;;
+-    --add_sentence_data)
+-    add_sentence_data="--add_sentence_data"
+-    shift # past argument
+-    ;;
+-    --remove_disambiguation_pages)
+-    remove_disambiguation_pages="--remove_disambiguation_pages"
+-    shift # past argument
+-    ;;
+-    *)    # unknown option
+-    NONRECOVERED+=("$1") # save it in an array for later
+-    shift # past argument
+-    ;;
+-esac
+-done
+-
+-if [ -z "$collection_name_only" ]
+-then
+-    echo "Example usage:"
+-    echo "bash ingestion_data.sh --processed_data_file_path /scratch/martinjosifoski/data/title2enriched_parsed_obj_plus.p --collection_name wikipedia_plus"
+-    echo "bash ingestion_data.sh --processed_data_file_path /scratch/martinjosifoski/data/title2enriched_parsed_obj_plus.p --collection_name wikipedia_plus --min_tokens 20 --add_sentence_data --remove_disambiguation_pages"
+-    exit 1
+-fi
+-
+-if [ -z "$processed_data_file_path" ]
+-then
+-    echo "Example usage:"
+-    echo "bash ingestion_data.sh --processed_data_file_path /scratch/martinjosifoski/data/title2enriched_parsed_obj_plus.p --collection_name wikipedia_plus"
+-    echo "bash ingestion_data.sh --processed_data_file_path /scratch/martinjosifoski/data/title2enriched_parsed_obj_plus.p --collection_name wikipedia_plus --min_tokens 20 --add_sentence_data --remove_disambiguation_pages"
+-    exit 1
+-fi
+-
+-echo "Non recovered parameters: $NONRECOVERED"
+-
+-
+-options_data_ingestion="$processed_data_file_path $collection_name $add_sentence_data $remove_disambiguation_pages $min_tokens"
+-options_init_collection="$collection_name $add_sentence_data"
+-
+-# echo "=====Creating collection with name '$collection_name_only'====="
+-# sudo su - solr -c "/opt/solr/bin/solr create -c $collection_name_only -n data_driven_schema_configs"
+-
+-echo "=====Initializing collection====="
+-bash blink/candidate_retrieval/scripts/init_collection.sh $options_init_collection
+-
+-echo "=====Populating collection====="
+-python blink/candidate_retrieval/data_ingestion.py $options_data_ingestion
+\ No newline at end of file
+diff --git blink/candidate_retrieval/scripts/ingestion_wrapper.sh b/./BLINK/blink/candidate_retrieval/scripts/ingestion_wrapper.sh
+deleted file mode 100644
+index 384496e..0000000
+--- blink/candidate_retrieval/scripts/ingestion_wrapper.sh
++++ /dev/null
+@@ -1,34 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-
+-if [ $# -le 0 ]
+-  then
+-    echo "Usage: ./ingestion_wrapper.sh processed_data_folder"
+-    exit 1
+-fi
+-
+-data_folder=$1
+-processed_data_file_path="$data_folder/KB_data/title2enriched_parsed_obj_plus.p"
+-
+-# Create the collecitons (requires sudo access!)
+-# sudo bash create_solr_collections.sh wikipedia_plus wikipedia_plus_no_dis wikipedia_plus_no_dis_min_20 wikipedia_plus_no_dis_min_40
+-sudo bash blink/candidate_retrieval/scripts/create_solr_collections.sh wikipedia
+-
+-# Enriched + sentence data
+-bash blink/candidate_retrieval/scripts/ingest_data.sh --processed_data_file_path $processed_data_file_path --collection_name wikipedia --add_sentence_data
+-
+-# # Prev + removal of disambiguation pages
+-# bash ingest_data.sh --processed_data_file_path $processed_data_file_path --collection_name wikipedia_plus_no_dis --add_sentence_data --remove_disambiguation_pages
+-
+-# # Prev + removal of docs with less then 20 words in total
+-# bash ingest_data.sh --processed_data_file_path $processed_data_file_path --collection_name wikipedia_plus_no_dis_min_20 --add_sentence_data --remove_disambiguation_pages --min_tokens 20
+-
+-# # Prev + removal of docs with less then 40 words in total
+-# bash ingest_data.sh --processed_data_file_path $processed_data_file_path --collection_name wikipedia_plus_no_dis_min_40 --add_sentence_data --remove_disambiguation_pages --min_tokens 40
+\ No newline at end of file
+diff --git blink/candidate_retrieval/scripts/init_collection.sh b/./BLINK/blink/candidate_retrieval/scripts/init_collection.sh
+deleted file mode 100644
+index e968ba8..0000000
+--- blink/candidate_retrieval/scripts/init_collection.sh
++++ /dev/null
+@@ -1,130 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-
+-if [ $# -le 0 ]
+-  then
+-    echo "Example usage:"
+-    echo "bash init_collection.sh --collection_name wikipedia_plus"
+-    echo "bash init_collection.sh --collection_name wikipedia_plus --add_sentence_data"
+-    exit 1
+-fi
+-
+-NONRECOVERED=()
+-
+-collection_name=""
+-add_sentence_data=""
+-
+-while [[ $# -gt 0 ]]
+-do
+-key="$1"
+-
+-case $key in
+-    --collection_name)
+-    collection_name="$2"
+-    shift # past argument
+-    shift # past value
+-    ;;
+-    --add_sentence_data)
+-    add_sentence_data="--add_sentence_data"
+-    shift # past argument
+-    ;;
+-    *)    # unknown option
+-    NONRECOVERED+=("$1") # save it in an array for later
+-    shift # past argument
+-    ;;
+-esac
+-done
+-
+-if [ -z "$collection_name" ]
+-then
+-    echo "Example usage:"
+-    echo "bash init_collection.sh --collection_name wikipedia_plus"
+-    echo "bash init_collection.sh --collection_name wikipedia_plus --add_sentence_data"
+-    exit 1
+-fi
+-
+-echo "Non recovered parameters: $NONRECOVERED"
+-
+-curl -X POST -H 'Content-type:application/json' --data-binary '{
+-  "add-field":{
+-     "name":"num_incoming_links",
+-     "type":"plongs",
+-     "multiValued":false,
+-     "stored":true}
+-}' "http://localhost:8983/solr/$collection_name/schema"
+-
+-curl -X POST -H 'Content-type:application/json' --data-binary '{
+-  "add-field":{
+-     "name":"num_tokens",
+-     "type":"plongs",
+-     "multiValued":false,
+-     "stored":true}
+-}' "http://localhost:8983/solr/$collection_name/schema"
+-
+-curl -X POST -H 'Content-type:application/json' --data-binary '{
+-  "add-field":{
+-     "name":"title",
+-     "type":"text_general",
+-     "multiValued":false,
+-     "stored":true}
+-}' "http://localhost:8983/solr/$collection_name/schema"
+-
+-curl -X POST -H 'Content-type:application/json' --data-binary '{
+-  "add-field":{
+-     "name":"aliases",
+-     "type":"text_general",
+-     "multiValued":false,
+-     "stored":true}
+-}' "http://localhost:8983/solr/$collection_name/schema"
+-
+-curl -X POST -H 'Content-type:application/json' --data-binary '{
+-  "add-field":{
+-     "name":"desc",
+-     "type":"text_general",
+-     "multiValued":false,
+-     "stored":true}
+-}' "http://localhost:8983/solr/$collection_name/schema"
+-
+-curl -X POST -H 'Content-type:application/json' --data-binary '{
+-  "add-field":{
+-     "name":"wikidata_desc",
+-     "type":"text_general",
+-     "multiValued":false,
+-     "stored":true}
+-}' "http://localhost:8983/solr/$collection_name/schema"
+-
+-curl -X POST -H 'Content-type:application/json' --data-binary '{
+-  "add-field":{
+-     "name":"wikidata_id",
+-     "type":"text_general",
+-     "multiValued":false,
+-     "stored":true}
+-}' "http://localhost:8983/solr/$collection_name/schema"
+-
+-if [ ! -z "$add_sentence_data" ]
+-then
+-    echo "Adding sentence data"
+-    for i in {1..10}
+-    do 
+-      key="sent_desc_$i"
+-      curl -X POST -H 'Content-type:application/json' --data-binary '{
+-        "add-field":{
+-          "name":'"$key"',
+-          "type":"text_general",
+-          "multiValued":false,
+-          "stored":true}
+-      }' "http://localhost:8983/solr/$collection_name/schema"
+-    done
+-fi
+-
+-
+-
+-
+-
+diff --git blink/candidate_retrieval/scripts/link_wikipedia_and_wikidata.sh b/./BLINK/blink/candidate_retrieval/scripts/link_wikipedia_and_wikidata.sh
+deleted file mode 100644
+index 1f06e95..0000000
+--- blink/candidate_retrieval/scripts/link_wikipedia_and_wikidata.sh
++++ /dev/null
+@@ -1,18 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-
+-precomputed_index_path=$1
+-parent_output_folder=$2
+-
+-# Generate mappings between wikipedia and wikidata ids, and titles and wikidata ids
+-python blink/candidate_retrieval/generate_wiki2wikidata_mappings.py --input_file $precomputed_index_path --output_folder $parent_output_folder
+-
+-# Generate mappings between wikipedia and wikidata ids, and titles and wikidata ids
+-python blink/candidate_retrieval/link_wikipedia_and_wikidata.py --output_folder $parent_output_folder
+diff --git blink/candidate_retrieval/scripts/process_wikidata_dump.sh b/./BLINK/blink/candidate_retrieval/scripts/process_wikidata_dump.sh
+deleted file mode 100644
+index 2bf05c5..0000000
+--- blink/candidate_retrieval/scripts/process_wikidata_dump.sh
++++ /dev/null
+@@ -1,21 +0,0 @@
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-#!/bin/bash
+-
+-
+-if [ $# -le 1 ]
+-  then
+-    echo "Usage: ./process_wikidata_dump.sh wikidata_json_dump_path data_folder_path"
+-    exit 1
+-fi
+-
+-json_file_path=$1
+-data_folder_path=$2
+-output_file_path="$data_folder_path/wikidataid_title2parsed_obj.p"
+-
+-# Extract information from wikidata dump 
+-python blink/candidate_retrieval/process_wikidata.py --input $json_file_path --output $output_file_path
+\ No newline at end of file
+diff --git blink/candidate_retrieval/scripts/process_wikipedia_dump.sh b/./BLINK/blink/candidate_retrieval/scripts/process_wikipedia_dump.sh
+deleted file mode 100644
+index fbb20a4..0000000
+--- blink/candidate_retrieval/scripts/process_wikipedia_dump.sh
++++ /dev/null
+@@ -1,61 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-
+-if [ $# -le 1 ]
+-  then
+-    echo "Usage: ./process_wikipedia_dump.sh wikipedia_xml_dump_path output_folder_path"
+-    exit 1
+-fi
+-
+-xml_file_path=$1
+-parent_output_folder=$2
+-
+-LIBS_PATH=libs
+-
+-output_folder_extractor=${parent_output_folder}/en_extractor
+-mkdir -p $output_folder_extractor
+-
+-full_wikipedia_data_file_path="${parent_output_folder}/en-wiki"
+-
+-if [[ ! -f $full_wikipedia_data_file_path ]]; then
+-  # Process the raw wikipedia dump to remove the markup
+-
+-  echo "Working on $(basename ${xml_file_path})"
+-
+-  if [ ! -d "$LIBS_PATH/wikiextractor" ]
+-  then
+-      echo "Cloning wikiextractor..."
+-      mkdir -p $LIBS_PATH
+-      git clone https://github.com/attardi/wikiextractor.git $LIBS_PATH/wikiextractor
+-  fi
+-
+-  $LIBS_PATH/wikiextractor/WikiExtractor.py --processes 30 -o ${output_folder_extractor} -q -s $xml_file_path
+-
+-  # Merge the output of the processing (wikiextractor outputs many files) into one file
+-
+-  c=0
+-  for small_file in $(find $output_folder_extractor -type f); 
+-  do	
+-    cat ${small_file} >> $full_wikipedia_data_file_path
+-    c=$((c + 1))
+-    echo "Processed $c files"
+-  done
+-  echo "Mark-up is removed"
+-else
+-  echo "$full_wikipedia_data_file_path already created"
+-fi
+-
+-# Extract the document meta-data and the introduction from wikipedia
+-filtered_wikipedia_data_file_path=${parent_output_folder}/en-wiki-filtered
+-python blink/candidate_retrieval/process_wiki_extractor_output.py --input $full_wikipedia_data_file_path --output $filtered_wikipedia_data_file_path
+-
+-# Extract the number of tokens in each wikipedia page and the full text
+-full_text_wikipedia_data_file_path=${parent_output_folder}/en-wiki-full-text
+-python blink/candidate_retrieval/process_wiki_extractor_output_full.py --input $full_wikipedia_data_file_path --output $full_text_wikipedia_data_file_path
+\ No newline at end of file
+diff --git blink/candidate_retrieval/scripts/process_wikipedia_dump_links.sh b/./BLINK/blink/candidate_retrieval/scripts/process_wikipedia_dump_links.sh
+deleted file mode 100644
+index 0983c57..0000000
+--- blink/candidate_retrieval/scripts/process_wikipedia_dump_links.sh
++++ /dev/null
+@@ -1,58 +0,0 @@
+-#!/bin/bash
+-
+-# Copyright (c) Facebook, Inc. and its affiliates.
+-# All rights reserved.
+-#
+-# This source code is licensed under the license found in the
+-# LICENSE file in the root directory of this source tree.
+-#
+-
+-
+-
+-if [ $# -le 1 ]
+-  then
+-    echo "Usage: ./process_wikipedia_dump_links.sh wikipedia_xml_dump_path output_folder_path"
+-    exit 1
+-fi
+-
+-xml_file_path=$1
+-parent_output_folder=$2
+-
+-LIBS_PATH=libs
+-
+-output_folder_extractor=${parent_output_folder}/en_extractor_links
+-mkdir -p $output_folder_extractor
+-
+-full_wikipedia_data_file_path="${parent_output_folder}/en-wikilinks"
+-
+-if [[ ! -f $full_wikipedia_data_file_path ]]; then
+-  # Process the raw wikipedia dump to remove the markup
+-
+-  echo "Working on $(basename ${xml_file_path})"
+-
+-  if [ ! -d "$LIBS_PATH/wikiextractor" ]
+-  then
+-      echo "Cloning wikiextractor..."
+-      mkdir -p $LIBS_PATH
+-      git clone https://github.com/attardi/wikiextractor.git $LIBS_PATH/wikiextractor
+-  fi
+-
+-  $LIBS_PATH/wikiextractor/WikiExtractor.py --processes 40 -o ${output_folder_extractor} -q -s -l $xml_file_path
+-
+-
+-  # Merge the output of the processing (wikiextractor outputs many files) into one file
+-
+-  c=0
+-  for small_file in $(find $output_folder_extractor -type f); 
+-  do	
+-    cat ${small_file} >> $full_wikipedia_data_file_path
+-    c=$((c + 1))
+-    echo "Processed $c files"
+-  done
+-  echo "Mark-up is removed"
+-else
+-  echo "$full_wikipedia_data_file_path already created"
+-fi
+-
+-filtered_wikipedia_data_file_path=${parent_output_folder}/en-wikilinks-processed
+-python blink/candidate_retrieval/process_wiki_extractor_output_links.py --input $full_wikipedia_data_file_path --output $filtered_wikipedia_data_file_path
+diff --git blink/candidate_retrieval/utils.py blink/candidate_retrieval/utils.py
+index 8844017..3476049 100644
+--- blink/candidate_retrieval/utils.py
++++ blink/candidate_retrieval/utils.py
+@@ -7,7 +7,8 @@
+ import sys
+ import pickle
+ import subprocess
+-import blink.candidate_retrieval.dataset as D
++
++import retriever.schema_retriever.dense_retriever.blink.candidate_retrieval.dataset as D
+ 
+ import re
+ import os
+diff --git blink/common/params.py blink/common/params.py
+index ac12161..39bca5a 100644
+--- blink/common/params.py
++++ blink/common/params.py
+@@ -183,6 +183,10 @@ class BlinkParser(argparse.ArgumentParser):
+             "--train_batch_size", default=8, type=int, 
+             help="Total batch size for training."
+         )
++        parser.add_argument(
++            "--eval_batch_size", default=8, type=int,
++            help="Total batch size for evaluation.",
++        )
+         parser.add_argument("--max_grad_norm", default=1.0, type=float)
+         parser.add_argument(
+             "--learning_rate",
+@@ -197,13 +201,13 @@ class BlinkParser(argparse.ArgumentParser):
+             help="Number of training epochs.",
+         )
+         parser.add_argument(
+-            "--print_interval", type=int, default=10, 
++            "--print_interval", type=int, default=5, 
+             help="Interval of loss printing",
+         )
+         parser.add_argument(
+            "--eval_interval",
+             type=int,
+-            default=100,
++            default=40,
+             help="Interval for evaluation during training",
+         )
+         parser.add_argument(
+@@ -239,10 +243,6 @@ class BlinkParser(argparse.ArgumentParser):
+         Add model evaluation args.
+         """
+         parser = self.add_argument_group("Model Evaluation Arguments")
+-        parser.add_argument(
+-            "--eval_batch_size", default=8, type=int,
+-            help="Total batch size for evaluation.",
+-        )
+         parser.add_argument(
+             "--mode",
+             default="valid",
+@@ -264,11 +264,11 @@ class BlinkParser(argparse.ArgumentParser):
+             "--cand_pool_path",
+             default=None,
+             type=str,
+-            help="Path for cached candidate pool (id tokenization of candidates)",
++            help="Path for candidate pool",
+         )
+         parser.add_argument(
+             "--cand_encode_path",
+             default=None,
+             type=str,
+-            help="Path for cached candidate encoding",
++            help="Path for candidate encoding",
+         )
+diff --git blink/crossencoder/crossencoder.py blink/crossencoder/crossencoder.py
+index 7202be3..9ffd747 100644
+--- blink/crossencoder/crossencoder.py
++++ blink/crossencoder/crossencoder.py
+@@ -28,9 +28,9 @@ from pytorch_transformers.modeling_roberta import (
+ from pytorch_transformers.tokenization_bert import BertTokenizer
+ from pytorch_transformers.tokenization_roberta import RobertaTokenizer
+ 
+-from blink.common.ranker_base import BertEncoder, get_model_obj
+-from blink.common.optimizer import get_bert_optimizer
+-from blink.common.params import ENT_START_TAG, ENT_END_TAG, ENT_TITLE_TAG
++from retriever.schema_retriever.dense_retriever.blink.common.ranker_base import BertEncoder, get_model_obj
++from retriever.schema_retriever.dense_retriever.blink.common.optimizer import get_bert_optimizer
++from retriever.schema_retriever.dense_retriever.blink.common.params import ENT_START_TAG, ENT_END_TAG, ENT_TITLE_TAG
+ 
+ 
+ def load_crossencoder(params):
+@@ -94,7 +94,7 @@ class CrossEncoderRanker(torch.nn.Module):
+         # init model
+         self.build_model()
+         if params["path_to_model"] is not None:
+-            self.load_model(params["path_to_model"])
++            self.load_model(params["path_to_model"], not torch.cuda.is_available())
+ 
+         self.model = self.model.to(self.device)
+         self.data_parallel = params.get("data_parallel")
+@@ -103,7 +103,7 @@ class CrossEncoderRanker(torch.nn.Module):
+ 
+     def load_model(self, fname, cpu=False):
+         if cpu:
+-            state_dict = torch.load(fname, map_location=lambda storage, location: "cpu")
++            state_dict = torch.load(fname, map_location=torch.device('cpu'))
+         else:
+             state_dict = torch.load(fname)
+         self.model.load_state_dict(state_dict)
+diff --git blink/crossencoder/data_process.py blink/crossencoder/data_process.py
+index ffb9b19..603dd42 100644
+--- blink/crossencoder/data_process.py
++++ blink/crossencoder/data_process.py
+@@ -9,8 +9,9 @@ import sys
+ 
+ import numpy as np
+ from tqdm import tqdm
+-import blink.biencoder.data_process as data
+-from blink.common.params import ENT_START_TAG, ENT_END_TAG
++
++import retriever.schema_retriever.dense_retriever.blink.biencoder.data_process as data
++from retriever.schema_retriever.dense_retriever.blink.common.params import ENT_START_TAG, ENT_END_TAG
+ 
+ 
+ 
+diff --git blink/crossencoder/train_cross.py blink/crossencoder/train_cross.py
+index 5120dca..2295d28 100644
+--- blink/crossencoder/train_cross.py
++++ blink/crossencoder/train_cross.py
+@@ -26,15 +26,15 @@ from pytorch_transformers.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
+ from pytorch_transformers.optimization import WarmupLinearSchedule
+ from pytorch_transformers.tokenization_bert import BertTokenizer
+ 
+-import blink.candidate_retrieval.utils
+-from blink.crossencoder.crossencoder import CrossEncoderRanker, load_crossencoder
++import retriever.schema_retriever.dense_retriever.blink.candidate_retrieval.utils
++from retriever.schema_retriever.dense_retriever.blink.crossencoder.crossencoder import CrossEncoderRanker
+ import logging
+ 
+-import blink.candidate_ranking.utils as utils
+-import blink.biencoder.data_process as data
+-from blink.biencoder.zeshel_utils import DOC_PATH, WORLDS, world_to_id
+-from blink.common.optimizer import get_bert_optimizer
+-from blink.common.params import BlinkParser
++import retriever.schema_retriever.dense_retriever.blink.candidate_ranking.utils as utils
++import retriever.schema_retriever.dense_retriever.blink.biencoder.data_process as data
++from retriever.schema_retriever.dense_retriever.blink.biencoder.zeshel_utils import DOC_PATH, WORLDS, world_to_id
++from retriever.schema_retriever.dense_retriever.blink.common.optimizer import get_bert_optimizer
++from retriever.schema_retriever.dense_retriever.blink.common.params import BlinkParser
+ 
+ 
+ logger = None
+@@ -60,7 +60,7 @@ def modify(context_input, candidate_input, max_seq_length):
+     return torch.LongTensor(new_input)
+ 
+ 
+-def evaluate(reranker, eval_dataloader, device, logger, context_length, zeshel=False, silent=True):
++def evaluate(reranker, eval_dataloader, device, logger, context_length, silent=True):
+     reranker.model.eval()
+     if silent:
+         iter_ = eval_dataloader
+@@ -73,59 +73,27 @@ def evaluate(reranker, eval_dataloader, device, logger, context_length, zeshel=F
+     nb_eval_examples = 0
+     nb_eval_steps = 0
+ 
+-    acc = {}
+-    tot = {}
+-    world_size = len(WORLDS)
+-    for i in range(world_size):
+-        acc[i] = 0.0
+-        tot[i] = 0.0
+-
+     all_logits = []
+-    cnt = 0
++
+     for step, batch in enumerate(iter_):
+-        if zeshel:
+-            src = batch[2]
+-            cnt += 1
+         batch = tuple(t.to(device) for t in batch)
+-        context_input = batch[0]
+-        label_input = batch[1]
++        context_input, label_input = batch
+         with torch.no_grad():
+             eval_loss, logits = reranker(context_input, label_input, context_length)
+ 
+         logits = logits.detach().cpu().numpy()
+         label_ids = label_input.cpu().numpy()
+ 
+-        tmp_eval_accuracy, eval_result = utils.accuracy(logits, label_ids)
++        tmp_eval_accuracy = utils.accuracy(logits, label_ids)
+ 
+         eval_accuracy += tmp_eval_accuracy
+         all_logits.extend(logits)
+ 
+         nb_eval_examples += context_input.size(0)
+-        if zeshel:
+-            for i in range(context_input.size(0)):
+-                src_w = src[i].item()
+-                acc[src_w] += eval_result[i]
+-                tot[src_w] += 1
+         nb_eval_steps += 1
+ 
+-    normalized_eval_accuracy = -1
+-    if nb_eval_examples > 0:
+-        normalized_eval_accuracy = eval_accuracy / nb_eval_examples
+-    if zeshel:
+-        macro = 0.0
+-        num = 0.0 
+-        for i in range(len(WORLDS)):
+-            if acc[i] > 0:
+-                acc[i] /= tot[i]
+-                macro += acc[i]
+-                num += 1
+-        if num > 0:
+-            logger.info("Macro accuracy: %.5f" % (macro / num))
+-            logger.info("Micro accuracy: %.5f" % normalized_eval_accuracy)
+-    else:
+-        if logger:
+-            logger.info("Eval accuracy: %.5f" % normalized_eval_accuracy)
+-
++    normalized_eval_accuracy = eval_accuracy / nb_eval_examples
++    logger.info("Eval accuracy: %.5f" % normalized_eval_accuracy)
+     results["normalized_accuracy"] = normalized_eval_accuracy
+     results["logits"] = all_logits
+     return results
+@@ -202,7 +170,7 @@ def main(params):
+     fname = os.path.join(params["data_path"], "train.t7")
+     train_data = torch.load(fname)
+     context_input = train_data["context_vecs"]
+-    candidate_input = train_data["candidate_vecs"]
++    candidate_input = train_data["cand_vecs"]
+     label_input = train_data["labels"]
+     if params["debug"]:
+         max_n = 200
+@@ -211,11 +179,8 @@ def main(params):
+         label_input = label_input[:max_n]
+ 
+     context_input = modify(context_input, candidate_input, max_seq_length)
+-    if params["zeshel"]:
+-        src_input = train_data['worlds'][:len(context_input)]
+-        train_tensor_data = TensorDataset(context_input, label_input, src_input)
+-    else:
+-        train_tensor_data = TensorDataset(context_input, label_input)
++
++    train_tensor_data = TensorDataset(context_input, label_input)
+     train_sampler = RandomSampler(train_tensor_data)
+ 
+     train_dataloader = DataLoader(
+@@ -224,23 +189,18 @@ def main(params):
+         batch_size=params["train_batch_size"]
+     )
+ 
+-    fname = os.path.join(params["data_path"], "valid.t7")
+-    valid_data = torch.load(fname)
+-    context_input = valid_data["context_vecs"]
+-    candidate_input = valid_data["candidate_vecs"]
+-    label_input = valid_data["labels"]
++    max_n = 2048
+     if params["debug"]:
+         max_n = 200
+-        context_input = context_input[:max_n]
+-        candidate_input = candidate_input[:max_n]
+-        label_input = label_input[:max_n]
++    fname = os.path.join(params["data_path"], "valid.t7")
++    valid_data = torch.load(fname)
++    context_input = valid_data["context_vecs"][:max_n]
++    candidate_input = valid_data["cand_vecs"][:max_n]
++    label_input = valid_data["labels"][:max_n]
+ 
+     context_input = modify(context_input, candidate_input, max_seq_length)
+-    if params["zeshel"]:
+-        src_input = valid_data["worlds"][:len(context_input)]
+-        valid_tensor_data = TensorDataset(context_input, label_input, src_input)
+-    else:
+-        valid_tensor_data = TensorDataset(context_input, label_input)
++
++    valid_tensor_data = TensorDataset(context_input, label_input)
+     valid_sampler = SequentialSampler(valid_tensor_data)
+ 
+     valid_dataloader = DataLoader(
+@@ -256,7 +216,6 @@ def main(params):
+         device=device,
+         logger=logger,
+         context_length=context_length,
+-        zeshel=params["zeshel"],
+         silent=params["silent"],
+     )
+ 
+@@ -295,8 +254,7 @@ def main(params):
+         part = 0
+         for step, batch in enumerate(iter_):
+             batch = tuple(t.to(device) for t in batch)
+-            context_input = batch[0] 
+-            label_input = batch[1]
++            context_input, label_input = batch
+             loss, _ = reranker(context_input, label_input, context_length)
+ 
+             # if n_gpu > 1:
+@@ -335,7 +293,6 @@ def main(params):
+                     device=device,
+                     logger=logger,
+                     context_length=context_length,
+-                    zeshel=params["zeshel"],
+                     silent=params["silent"],
+                 )
+                 logger.info("***** Saving fine - tuned model *****")
+@@ -361,7 +318,6 @@ def main(params):
+             device=device,
+             logger=logger,
+             context_length=context_length,
+-            zeshel=params["zeshel"],
+             silent=params["silent"],
+         )
+ 
+@@ -384,12 +340,14 @@ def main(params):
+     params["path_to_model"] = os.path.join(
+         model_output_path, "epoch_{}".format(best_epoch_idx)
+     )
++    # utils.save_model(reranker.model, tokenizer, model_output_path)
++    # reranker = utils.get_biencoder(params)
++    # reranker.save(model_output_path)
+ 
+ 
+ if __name__ == "__main__":
+     parser = BlinkParser(add_model_args=True)
+     parser.add_training_args()
+-    parser.add_eval_args()
+ 
+     # args = argparse.Namespace(**params)
+     args = parser.parse_args()
+diff --git blink/indexer/faiss_indexer.py blink/index/faiss_indexer.py
+similarity index 97%
+rename from ./BLINK/blink/indexer/faiss_indexer.py
+rename to ./ListQA/retriever/schema_retriever/dense_retriever/blink/index/faiss_indexer.py
+index f9bf8f8..ee29a70 100644
+diff --git blink/main_dense.py blink/main_dense.py
+index c9c0146..5a2175b 100644
+--- blink/main_dense.py
++++ blink/main_dense.py
+@@ -15,18 +15,18 @@ import numpy as np
+ from colorama import init
+ from termcolor import colored
+ 
+-import blink.ner as NER
++import retriever.schema_retriever.dense_retriever.blink.ner as NER
+ from torch.utils.data import DataLoader, SequentialSampler, TensorDataset
+-from blink.biencoder.biencoder import BiEncoderRanker, load_biencoder
+-from blink.crossencoder.crossencoder import CrossEncoderRanker, load_crossencoder
+-from blink.biencoder.data_process import (
++from retriever.schema_retriever.dense_retriever.blink.biencoder.biencoder import BiEncoderRanker, load_biencoder
++from retriever.schema_retriever.dense_retriever.blink.crossencoder.crossencoder import CrossEncoderRanker, load_crossencoder
++from retriever.schema_retriever.dense_retriever.blink.biencoder.data_process import (
+     process_mention_data,
+     get_candidate_representation,
+ )
+-import blink.candidate_ranking.utils as utils
+-from blink.crossencoder.train_cross import modify, evaluate
+-from blink.crossencoder.data_process import prepare_crossencoder_data
+-from blink.indexer.faiss_indexer import DenseFlatIndexer, DenseHNSWFlatIndexer
++import retriever.schema_retriever.dense_retriever.blink.candidate_ranking.utils as utils
++from retriever.schema_retriever.dense_retriever.blink.crossencoder.train_cross import modify, evaluate
++from retriever.schema_retriever.dense_retriever.blink.crossencoder.data_process import prepare_crossencoder_data
++from retriever.schema_retriever.dense_retriever.blink.index.faiss_indexer import DenseFlatIndexer, DenseHNSWFlatIndexer
+ 
+ 
+ HIGHLIGHTS = [
+@@ -58,7 +58,6 @@ def _print_colorful_text(input_sentence, samples):
+                 msg += input_sentence[int(sample["end_pos"]) :]
+     else:
+         msg = input_sentence
+-        print("Failed to identify entity from text:")
+     print("\n" + str(msg) + "\n")
+ 
+ 
+@@ -128,13 +127,13 @@ def _load_candidates(
+             entity = json.loads(line)
+ 
+             if "idx" in entity:
+-                split = entity["idx"].split("curid=")
+-                if len(split) > 1:
+-                    wikipedia_id = int(split[-1].strip())
+-                else:
+-                    wikipedia_id = entity["idx"].strip()
+-
+-                assert wikipedia_id not in wikipedia_id2local_id
++                #split = entity["idx"].split("curid=")
++                #if len(split) > 1:
++                #    wikipedia_id = int(split[-1].strip())
++                #else:
++                #    wikipedia_id = entity["idx"].strip()
++                wikipedia_id=entity["idx"]
++                #assert wikipedia_id not in wikipedia_id2local_id
+                 wikipedia_id2local_id[wikipedia_id] = local_idx
+ 
+             title2id[entity["title"]] = local_idx
+@@ -248,11 +247,11 @@ def _run_biencoder(biencoder, dataloader, candidate_encoding, top_k=100, indexer
+                 scores, indicies = indexer.search_knn(context_encoding, top_k)
+             else:
+                 scores = biencoder.score_candidate(
+-                    context_input, None, cand_encs=candidate_encoding  # .to(device)
++                    context_input.to("cuda"), None, cand_encs=candidate_encoding.to("cuda")
+                 )
+                 scores, indicies = scores.topk(top_k)
+-                scores = scores.data.numpy()
+-                indicies = indicies.data.numpy()
++                scores = scores.data.cpu().numpy()
++                indicies = indicies.data.cpu().numpy()
+ 
+         labels.extend(label_ids.data.numpy())
+         nns.extend(indicies)
+@@ -274,15 +273,11 @@ def _run_crossencoder(crossencoder, dataloader, logger, context_len, device="cud
+     accuracy = 0.0
+     crossencoder.to(device)
+ 
+-    res = evaluate(crossencoder, dataloader, device, logger, context_len, zeshel=False, silent=False)
++    res = evaluate(crossencoder, dataloader, device, logger, context_len, silent=False)
+     accuracy = res["normalized_accuracy"]
+     logits = res["logits"]
+ 
+-    if accuracy > -1:
+-        predictions = np.argsort(logits, axis=1)
+-    else:
+-        predictions = []
+-
++    predictions = np.argsort(logits, axis=1)
+     return accuracy, predictions, logits
+ 
+ 
+@@ -293,6 +288,8 @@ def load_models(args, logger=None):
+         logger.info("loading biencoder model")
+     with open(args.biencoder_config) as json_file:
+         biencoder_params = json.load(json_file)
++        print('###############')
++        print(biencoder_params)
+         biencoder_params["path_to_model"] = args.biencoder_model
+     biencoder = load_biencoder(biencoder_params)
+ 
+@@ -318,11 +315,7 @@ def load_models(args, logger=None):
+         wikipedia_id2local_id,
+         faiss_indexer,
+     ) = _load_candidates(
+-        args.entity_catalogue, 
+-        args.entity_encoding, 
+-        faiss_index=getattr(args, 'faiss_index', None), 
+-        index_path=getattr(args, 'index_path' , None),
+-        logger=logger,
++        args.entity_catalogue, args.entity_encoding, faiss_index=args.faiss_index, index_path=args.index_path, logger=logger
+     )
+ 
+     return (
+@@ -390,8 +383,7 @@ def run(
+             _print_colorful_text(text, samples)
+ 
+         else:
+-            if logger:
+-                logger.info("test dataset mode")
++            logger.info("test dataset mode")
+ 
+             if test_data:
+                 samples = test_data
+@@ -415,15 +407,13 @@ def run(
+         )
+ 
+         # prepare the data for biencoder
+-        if logger:
+-            logger.info("preparing data for biencoder")
++        logger.info("preparing data for biencoder")
+         dataloader = _process_biencoder_dataloader(
+             samples, biencoder.tokenizer, biencoder_params
+         )
+ 
+         # run biencoder
+-        if logger:
+-            logger.info("run biencoder")
++        logger.info("run biencoder")
+         top_k = args.top_k
+         labels, nns, scores = _run_biencoder(
+             biencoder, dataloader, candidate_encoding, top_k, faiss_indexer
+@@ -568,10 +558,9 @@ def run(
+                     % crossencoder_normalized_accuracy
+                 )
+ 
+-                if len(samples) > 0:
+-                    overall_unormalized_accuracy = (
+-                        crossencoder_normalized_accuracy * len(label_input) / len(samples)
+-                    )
++                overall_unormalized_accuracy = (
++                    crossencoder_normalized_accuracy * len(label_input) / len(samples)
++                )
+                 print(
+                     "overall unnormalized accuracy: %.4f" % overall_unormalized_accuracy
+                 )
+diff --git blink/main_solr.py blink/main_solr.py
+index 1624c59..86733f3 100644
+--- blink/main_solr.py
++++ blink/main_solr.py
+@@ -6,11 +6,11 @@
+ #
+ import os
+ 
+-import blink.utils as utils
+-import blink.ner as NER
+-import blink.candidate_generation as CG
+-import blink.candidate_data_fetcher as CDF
+-import blink.reranker as R
++import retriever.schema_retriever.dense_retriever.blink.utils as utils
++import retriever.schema_retriever.dense_retriever.blink.ner as NER
++import retriever.schema_retriever.dense_retriever.blink.candidate_generation as CG
++import retriever.schema_retriever.dense_retriever.blink.candidate_data_fetcher as CDF
++import retriever.schema_retriever.dense_retriever.blink.reranker as R
+ 
+ import argparse
+ import shutil
+diff --git blink/ner.py blink/ner.py
+index 05d1543..26b99bd 100644
+--- blink/ner.py
++++ blink/ner.py
+@@ -40,4 +40,3 @@ class Flair(NER_model):
+                 mention["sent_idx"] = sent_idx
+             mentions.extend(sent_mentions)
+         return {"sentences": sentences, "mentions": mentions}
+-
+diff --git blink/reranker.py blink/reranker.py
+index 0280bb5..6a94f09 100644
+--- blink/reranker.py
++++ blink/reranker.py
+@@ -4,7 +4,8 @@
+ # This source code is licensed under the license found in the
+ # LICENSE file in the root directory of this source tree.
+ #
+-from blink.candidate_ranking.bert_reranking import BertReranker
++
++from retriever.schema_retriever.dense_retriever.blink.candidate_ranking.bert_reranking import BertReranker
+ 
+ 
+ def get_model(params):
+diff --git blink/run_benchmark.py blink/run_benchmark.py
+index a2be59b..72aca59 100644
+--- blink/run_benchmark.py
++++ blink/run_benchmark.py
+@@ -6,9 +6,9 @@
+ #
+ import argparse
+ import prettytable
+-
+-import blink.main_dense as main_dense
+-import blink.candidate_ranking.utils as utils
++s
++import retriever.schema_retriever.dense_retriever.blink.main_dense as main_dense
++import retriever.schema_retriever.dense_retriever.blink.candidate_ranking.utils as utils
+ 
+ DATASETS = [
+     {

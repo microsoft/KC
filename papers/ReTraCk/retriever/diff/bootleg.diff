@@ -1,0 +1,636 @@
+diff --git bootleg/config.py bootleg/config.py
+index fdd8e4e..ef67abf 100644
+--- bootleg/config.py
++++ bootleg/config.py
+@@ -58,7 +58,9 @@ config_args = {
+         "ff_inner_size": (500, "inner size of the pointwise feedforward layers in attn blocks"),
+         "num_model_stages": (1, "number of model stages"),
+         "num_fc_layers": (1, "number of fully scoring layers at end"),
+-        "custom_args": ('{}', "custom arguments for the model file")
++        "custom_args": ('{}', "custom arguments for the model file"),
++        "use_prior": (True, "whether to use prior in the model"),
++        "combine_prior_hidden_size": (100, "if use_prior is true, then set combine_prior_hidden_size")
+     },
+     "data_config": {
+         "train_in_candidates": (True, "Train in candidates (if False, this means we include NIL entity)"),
+diff --git bootleg/dataloaders/wiki_dataset.py bootleg/dataloaders/wiki_dataset.py
+index b3bcc46..2753bee 100644
+--- bootleg/dataloaders/wiki_dataset.py
++++ bootleg/dataloaders/wiki_dataset.py
+@@ -165,7 +165,7 @@ class WikiDataset(Dataset):
+     def __getitem__(self, key):
+         # start = time.time()
+         example = self.data[key]
+-        entity_indices = self.alias2entity_table(example['alias_idx'])
++        entity_indices, entity_priors = self.alias2entity_table(example['alias_idx'])
+         # True entities will be true and false golds for train (if use_weak_label in config is true) and just true golds for eval
+         true_entities = torch.from_numpy(example['true_entity_idx'])
+         M = true_entities.shape
+@@ -183,6 +183,7 @@ class WikiDataset(Dataset):
+             one_hot_true_entities[keep_mask.unsqueeze(-1).expand_as(one_hot_true_entities)] = 0
+             one_hot_true_entities[padded_entities.unsqueeze(-1).expand_as(one_hot_true_entities)] = 0
+             entity_indices = entity_indices.masked_fill(one_hot_true_entities, -1)
++            entity_priors = entity_priors.masked_fill(one_hot_true_entities, 0.0)
+             # set new true label to 0 ('not in candidate')
+             true_entities = true_entities.masked_fill(~keep_mask, 0)
+             # make sure original padded entities are padded
+@@ -197,6 +198,7 @@ class WikiDataset(Dataset):
+                         'sent_idx': example['sent_idx'],
+                         'subsent_idx': example['subsent_idx'],
+                         'entity_indices': entity_indices,
++                        'entity_priors': entity_priors,
+                         # due to subsentence split, we need to keep track of the original alias position in the list
+                         # to do eval over slices when distributed
+                         # (examples from a sentence may be distributed across different GPUs)
+diff --git bootleg/embeddings/entity_embs.py bootleg/embeddings/entity_embs.py
+index f448093..d67a4d9 100644
+--- bootleg/embeddings/entity_embs.py
++++ bootleg/embeddings/entity_embs.py
+@@ -45,7 +45,7 @@ class LearnedEntityEmb(EntityEmb):
+             else:
+                 self.logger.debug(f"All learned entity embeddings are initialized to the same value.")
+             init_vec = model_utils.init_embeddings_to_vec(self.learned_entity_embedding, pad_idx=-1, vec=init_vec)
+-            vec_save_file = os.path.join(train_utils.get_save_folder(main_args.run_config), "init_vec_entity_embs.npy")
++            vec_save_file = os.path.join(train_utils.get_save_folder(main_args), "init_vec_entity_embs.npy")
+             self.logger.debug(f"Saving init vector to {vec_save_file}")
+             np.save(vec_save_file, init_vec)
+         else:
+@@ -159,7 +159,7 @@ class TopKEntityEmb(EntityEmb):
+             else:
+                 self.logger.debug(f"All learned entity embeddings are initialized to the same value.")
+             init_vec = model_utils.init_embeddings_to_vec(self.learned_entity_embedding, pad_idx=-1, vec=init_vec)
+-            vec_save_file = os.path.join(train_utils.get_save_folder(main_args.run_config), "init_vec_entity_embs.npy")
++            vec_save_file = os.path.join(train_utils.get_save_folder(main_args), "init_vec_entity_embs.npy")
+             self.logger.debug(f"Saving init vector to {vec_save_file}")
+             np.save(vec_save_file, init_vec)
+         else:
+diff --git bootleg/extract_mentions.py bootleg/extract_mentions.py
+index 945246d..7a17592 100644
+--- bootleg/extract_mentions.py
++++ bootleg/extract_mentions.py
+@@ -71,8 +71,6 @@ def get_all_aliases(alias2qidcands, logger):
+ 
+ # TODO: simplify -- remove extra filters
+ def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
+-    PUNC = string.punctuation
+-    table = str.maketrans(dict.fromkeys(PUNC))  # OR {key: None for key in string.punctuation}
+     used_aliases = []
+     sentence_split_raw = sentence.split()
+     # find largest aliases first
+@@ -83,14 +81,7 @@ def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
+         for gram_words in grams:
+             j_st += 1
+             j_end += 1
+-            # We don't want punctuation words to be used at the beginning/end
+-            if len(gram_words[0].translate(table).strip()) == 0 or len(gram_words[-1].translate(table).strip()) == 0:
+-                continue
+-            gram_attempt = get_lnrm(" ".join(gram_words))
+-            # TODO: remove possessives from alias table
+-            if len(gram_attempt) > 1:
+-                if gram_attempt[-1] == 's' and gram_attempt[-2] == ' ':
+-                    continue
++            gram_attempt = " ".join(gram_words)
+             if gram_attempt in all_aliases:
+                 keep = True
+                 # We start from the largest n-grams and go down in size. This prevents us from adding an alias that is a subset of another.
+@@ -111,6 +102,7 @@ def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
+     spans = [[a[1], a[2]] for a in aliases_for_sorting]
+     return used_aliases, spans
+ 
++
+ def get_num_lines(input_src):
+     # get number of lines
+     num_lines = 0
+@@ -168,7 +160,7 @@ def merge_files(chunk_outfiles, out_filepath):
+                     sent_idx_unq += 1
+ 
+ def extract_mentions(in_filepath, out_filepath, cand_map_file, max_alias_len=6, num_workers=8,
+-    logger=logging.getLogger()):
++                     logger=logging.getLogger()):
+     candidate_map = ujson.load(open(cand_map_file))
+     all_aliases_trie = get_all_aliases(candidate_map, logger=logger)
+     start_time = time.time()
+@@ -196,7 +188,7 @@ def extract_mentions(in_filepath, out_filepath, cand_map_file, max_alias_len=6,
+         subprocess_args = [{'in_file': chunk_infiles[i],
+                             'out_file': chunk_outfiles[i],
+                             'max_alias_len': max_alias_len}
+-                            for i in range(num_chunks)]
++                           for i in range(num_chunks)]
+         pool.map(subprocess, subprocess_args)
+         pool.close()
+         pool.join()
+diff --git bootleg/model.py bootleg/model.py
+index 65cd5ee..9137c59 100644
+--- bootleg/model.py
++++ bootleg/model.py
+@@ -33,6 +33,14 @@ class Model(nn.Module):
+         self.attn_network = getattr(mod, load_class)(args, self.emb_layer.emb_sizes, self.emb_layer.sent_emb_size, entity_symbols, word_symbols)
+         # slice heads
+         self.slice_heads = self.get_slice_method(args, entity_symbols)
++        self.use_prior = args.model_config.use_prior
++        if args.model_config.use_prior:
++            self.combine_prior_layer = nn.Sequential(
++                nn.Linear(2, args.model_config.combine_prior_hidden_size),
++                nn.ReLU(),
++                nn.Linear(args.model_config.combine_prior_hidden_size, 1)
++            )
++        # combine prior
+         self.freeze_components(args)
+ 
+     def get_slice_method(self, args, entity_symbols):
+@@ -60,8 +68,12 @@ class Model(nn.Module):
+         if args.data_config.word_embedding.freeze_sent_emb:
+             self.emb_layer.sent_emb.freeze_params()
+ 
++    def combine_prior(self, outs, entity_priors):
++        for head in outs[DISAMBIG]:
++            outs[DISAMBIG][head] = self.combine_prior_layer(torch.cat([outs[DISAMBIG][head].unsqueeze(-1), entity_priors.unsqueeze(-1)], dim=-1)).squeeze(-1)
++
+     def forward(self, alias_idx_pair_sent, word_indices, alias_indices,
+-        entity_indices, batch_prepped_data, batch_on_the_fly_data):
++        entity_indices, entity_priors, batch_prepped_data, batch_on_the_fly_data):
+         # mask out padded candidates
+         mask = entity_indices == -1
+         entity_indices = torch.where(entity_indices >= 0, entity_indices,
+@@ -77,6 +89,8 @@ class Model(nn.Module):
+             entity_pack=entity_package, sent_emb=sent_emb)
+         # update output dictionary with backbone out
+         res[DISAMBIG].update(backbone_out[DISAMBIG])
++        if self.use_prior:
++            self.combine_prior(res, entity_priors)
+         if self.type_pred:
+             res[TYPEPRED] = {train_utils.get_type_head_name(): batch_type_pred}
+         return res, entity_package, final_entity_embs
+diff --git bootleg/prep.py bootleg/prep.py
+index a38be07..f3c6584 100644
+--- bootleg/prep.py
++++ bootleg/prep.py
+@@ -142,9 +142,10 @@ def generate_data_subsent_helper(input_args):
+                 assert all(isinstance(a, bool) for a in anchor)
+                 all_false_anchors = all([a is False for a in anchor])
+ 
++            # todo: check correctness for removing alias in alias_map strong assumption
+             # checks that filtering was done correctly
+-            for alias in aliases:
+-                assert (alias in entity_symbols.get_all_aliases()), f"alias {alias} is not in entity_symbols"
++            # for alias in aliases:
++            #     assert (alias in entity_symbols.get_all_aliases()), f"alias {alias} is not in entity_symbols"
+             for span in spans:
+                 assert len(span) == 2,  f"Span should be len 2. Your span {span} is {len(span)}"
+             if not use_weak_label:
+@@ -232,7 +233,7 @@ def process_data_subsent_helper(input_args):
+             aliases = line['aliases']
+             qids = line['qids']
+             alias_list_pos = line['alias_list_pos']
+-            assert len(aliases_to_predict) >= 0, f'There are no aliases to predict for an example. This should not happen at this point.'
++            assert len(aliases_to_predict) > 0, f'There are no aliases to predict for an example. This should not happen at this point.'
+             assert len(aliases) <= data_args.max_aliases, f'Each example should have no more that {data_args.max_aliases} max aliases. {json.dumps(line)} does.'
+             example_aliases = np.ones(data_args.max_aliases) * PAD_ID
+             example_aliases_locs_start = np.ones(data_args.max_aliases) * PAD_ID
+@@ -249,7 +250,8 @@ def process_data_subsent_helper(input_args):
+                 # generate indexes into alias table.
+                 alias_trie_idx = entity_symbols.get_alias_idx(alias)
+                 alias_qids = np.array(entity_symbols.get_qid_cands(alias))
+-                if not qid in alias_qids:
++                alias_qids_set = set(entity_symbols.get_qid_cands(alias))
++                if not qid in alias_qids_set:
+                     # assert not data_args.train_in_candidates
+                     if not data_args.train_in_candidates:
+                         # set class label to be "not in candidate set"
+@@ -464,7 +466,7 @@ def process_emb_helper(input_args):
+     # alias entity table and embeddings have already been prepped by now so
+     # we can pass None for entity_symbols to avoid huge memory cost of
+     # duplicating entity_symbols across processes
+-    alias2entity_table, _ = AliasEntityTable.prep(args=args, entity_symbols=None,
++    alias2entity_table, _, _, _ = AliasEntityTable.prep(args=args, entity_symbols=None,
+         num_aliases_with_pad=num_aliases_with_pad, num_cands_K=num_cands_K,
+         log_func=logging.debug)
+     logging.debug(f'alias table size {len(pickle.dumps(alias2entity_table, -1))}')
+@@ -880,8 +882,11 @@ def main():
+     config_parser = argparse.ArgumentParser('Where is config script?')
+     config_parser.add_argument('--config_script', type=str, default='run_config.json',
+                         help='This config should mimc the config.py config json with parameters you want to override.')
++    config_parser.add_argument('--base_dir', type=str, default='/home/t-shuche/Workspace/bootleg')
+     args, unknown = config_parser.parse_known_args()
+-    args = get_full_config(args.config_script, unknown)
++    final_args = get_full_config(args.config_script, unknown)
++    utils.add_data_dir(final_args, args)
++    args = final_args
+     train_utils.setup_train_heads_and_eval_slices(args)
+     formatter = logging.Formatter('%(asctime)s %(message)s')
+     numeric_level = getattr(logging, args.run_config.loglevel.upper(), None)
+diff --git bootleg/run.py bootleg/run.py
+index 5a27943..3dcaa78 100644
+--- bootleg/run.py
++++ bootleg/run.py
+@@ -52,7 +52,7 @@ def main(args, mode):
+         assert args.run_config.perc_eval == 1.0, f"If you are running dump_preds or dump_embs, run_config.perc_eval must be 1.0. You have {args.run_config.perc_eval}"
+         assert args.data_config.test_dataset.use_weak_label is True, f"We do not support dumping when the test dataset gold is set to false. You can filter the dataset and run with filtered data."
+ 
+-    utils.dump_json_file(filename=os.path.join(train_utils.get_save_folder(args.run_config), f"config_{mode}.json"), contents=args)
++    utils.dump_json_file(filename=os.path.join(train_utils.get_save_folder(args), f"config_{mode}.json"), contents=args)
+     if args.run_config.distributed:
+         mp.spawn(main_worker, nprocs=args.run_config.ngpus_per_node, args=(args, mode, world_size))
+     else:
+@@ -182,7 +182,7 @@ def train(args, is_writer, logger, world_size, rank):
+             # Save model
+             if (global_step+1) % save_steps == 0 and is_writer:
+                 logger.info("Saving model...")
+-                trainer.save(save_dir=train_utils.get_save_folder(args.run_config), epoch=epoch, step=global_step, step_in_batch=i, suffix=args.run_config.model_suffix)
++                trainer.save(save_dir=train_utils.get_save_folder(args), epoch=epoch, step=global_step, step_in_batch=i, suffix=args.run_config.model_suffix)
+             # Run evaluation
+             if (global_step+1) % eval_steps == 0:
+                 eval_utils.run_eval_all_dev_sets(args, global_step, dev_dataset_collection, logger, status_reporter, trainer)
+@@ -191,16 +191,23 @@ def train(args, is_writer, logger, world_size, rank):
+             global_step += 1
+             # Time loading new batch
+             start_time_load = time.time()
++            if epoch == 0 and i == 0:
++                # logging gpu usage
++                gpu_memory_map, gpu_utilization_map = utils.get_gpu_map()
++                for device_id in gpu_memory_map:
++                    logger.info("GPU device {}: Memory: {}MiB: GPU Utilization: {}%".format(device_id,
++                                                                                            gpu_memory_map[device_id],
++                                                                                            gpu_utilization_map[device_id]))
+         ######### END OF EPOCH
+         if is_writer:
+             logger.info(f"Saving model end of epoch {epoch}...")
+-            trainer.save(save_dir=train_utils.get_save_folder(args.run_config), epoch=epoch, step=global_step, step_in_batch=i, end_of_epoch=True, suffix=args.run_config.model_suffix)
++            trainer.save(save_dir=train_utils.get_save_folder(args), epoch=epoch, step=global_step, step_in_batch=i, end_of_epoch=True, suffix=args.run_config.model_suffix)
+         # Always run eval when saving -- if this coincided with eval_step, then don't need to rerun eval
+         if (global_step+1) % eval_steps != 0:
+             eval_utils.run_eval_all_dev_sets(args, global_step, dev_dataset_collection, logger, status_reporter, trainer)
+     if is_writer:
+         logger.info("Saving model...")
+-        trainer.save(save_dir=train_utils.get_save_folder(args.run_config), epoch=epoch, step=global_step, step_in_batch=i, end_of_epoch=True, last_epoch=True, suffix=args.run_config.model_suffix)
++        trainer.save(save_dir=train_utils.get_save_folder(args), epoch=epoch, step=global_step, step_in_batch=i, end_of_epoch=True, last_epoch=True, suffix=args.run_config.model_suffix)
+     if args.run_config.distributed:
+         dist.barrier()
+ 
+@@ -274,6 +281,9 @@ if __name__ == '__main__':
+                                help='This config should mimc the config.py config json with parameters you want to override.'
+                                     'You can also override the parameters from config_script by passing them in directly after config_script. E.g., --train_config.batch_size 5')
+     config_parser.add_argument('--mode', type=str, default='train', choices=["train", "eval", "dump_preds", "dump_embs"])
++    config_parser.add_argument('--base_dir', type=str, default='/home/t-shuche/Workspace/bootleg')
++    config_parser.add_argument('--experiment_name', type=str, default='test')
++    config_parser.add_argument('--tensorboard_dir', type=str, default='/home/t-shuche/Workspace/bootleg/tensorboard')
+     # you can add other args that will override those in the config_script
+ 
+     # parse_known_args returns 'args' that are the same as what parse_args() returns
+@@ -281,4 +291,7 @@ if __name__ == '__main__':
+     # 'unknown' are what we pass on to our override any args from the second phase of arg parsing from the json config file
+     args, unknown = config_parser.parse_known_args()
+     final_args = get_full_config(args.config_script, unknown)
++    final_args.run_config.experiment_name = args.experiment_name
++    final_args.run_config.tensorboard_dir = args.tensorboard_dir
++    utils.add_data_dir(final_args, args)
+     main(final_args, args.mode)
+diff --git bootleg/symbols/alias_entity_table.py bootleg/symbols/alias_entity_table.py
+index 8497fcc..7d22149 100644
+--- bootleg/symbols/alias_entity_table.py
++++ bootleg/symbols/alias_entity_table.py
+@@ -18,11 +18,11 @@ class AliasEntityTable(nn.Module):
+         self.num_aliases_with_pad = len(entity_symbols.get_all_aliases()) + 1
+         self.M = args.data_config.max_aliases
+         self.K = entity_symbols.max_candidates + (not args.data_config.train_in_candidates)
+-        self.alias2entity_table, self.prep_file = self.prep(args, entity_symbols,
++        self.alias2entity_table, self.prep_file, self.alias2prior_table, self.prior_prep_file = self.prep(args, entity_symbols,
+             num_aliases_with_pad=self.num_aliases_with_pad, num_cands_K=self.K,
+             log_func=self.logger.debug)
+         # Small check that loading was done correctly. This isn't a catch all, but will catch is the same or something went wrong.
+-        assert np.all(np.array(self.alias2entity_table[-1]) == np.ones(self.K)*-1), f"The last row of the alias table isn't -1, something wasn't loaded right."
++        # assert np.all(np.array(self.alias2entity_table[-1][1:]) == np.ones(self.K-1)*-1) and self.alias2entity_table[-1][0] == 0, f"The last row of the alias table isn't [0, -1, -1, ...], something wasn't loaded right."
+ 
+     @classmethod
+     def prep(cls, args, entity_symbols, num_aliases_with_pad, num_cands_K, log_func=print):
+@@ -34,22 +34,37 @@ class AliasEntityTable(nn.Module):
+         alias_str = os.path.splitext(args.data_config.alias_cand_map)[0]
+         prep_file = os.path.join(prep_dir,
+             f'alias2entity_table_{alias_str}_InC{int(args.data_config.train_in_candidates)}.pt')
++        prior_prep_file = os.path.join(prep_dir,
++            f'alias2prior_table_{alias_str}_InC{int(args.data_config.train_in_candidates)}.pt')
+         if (not args.data_config.overwrite_preprocessed_data
+-            and os.path.exists(prep_file)):
++            and os.path.exists(prep_file) and os.path.exists(prior_prep_file)):
+             log_func(f'Loading alias table from {prep_file}')
+             start = time.time()
+             alias2entity_table = np.memmap(prep_file, dtype='int64', mode='r', shape=data_shape)
+             log_func(f'Loaded alias table in {round(time.time() - start, 2)}s')
++
++            log_func(f'Loading prior table from {prior_prep_file}')
++            start = time.time()
++            alias2prior_table = np.memmap(prior_prep_file, dtype='float32', mode='r', shape=data_shape)
++            log_func(f'Loaded prior table in {round(time.time() - start, 2)}s')
+         else:
+             start = time.time()
+             log_func(f'Building alias table')
+             utils.ensure_dir(prep_dir)
+             mmap_file = np.memmap(prep_file, dtype='int64', mode='w+', shape=data_shape)
+-            alias2entity_table  = cls.build_alias_table(args, entity_symbols)
++            alias2entity_table = cls.build_alias_table(args, entity_symbols)
+             mmap_file[:] = alias2entity_table[:]
+             mmap_file.flush()
+             log_func(f"Finished building and saving alias table in {round(time.time() - start, 2)}s.")
+-        return alias2entity_table, prep_file
++            log_func(f"Building prior table")
++            start = time.time()
++            mmap_file = np.memmap(prior_prep_file, dtype='float32', mode='w+', shape=data_shape)
++            alias2prior_table = cls.build_prior_table(args, entity_symbols)
++            mmap_file[:] = alias2prior_table[:]
++            mmap_file.flush()
++            log_func(f"Finished building and saving prior table in {round(time.time() - start, 2)}s.")
++
++        return alias2entity_table, prep_file, alias2prior_table, prior_prep_file
+ 
+     @classmethod
+     def build_alias_table(cls, args, entity_symbols):
+@@ -73,11 +88,36 @@ class AliasEntityTable(nn.Module):
+             # val[0] because vals is [qid, page_counts]
+             entity_list[(not args.data_config.train_in_candidates):len(eid_cands)+(not args.data_config.train_in_candidates)] = torch.tensor(eid_cands)
+             alias2entity_table[alias_id, :] = entity_list
++        # set NIC for UNK alias
++        # if not args.data_config.train_in_candidates:
++        alias2entity_table[-1, 0] = 0
+         return alias2entity_table.long()
+ 
++    @classmethod
++    def build_prior_table(cls, args, entity_symbols):
++        """Builds the alias to entity prior table"""
++        # we need to include a non candidate entity option for each alias and a row for unk alias
++        # +1 is for UNK alias (last row)
++        num_aliases_with_pad = len(entity_symbols.get_all_aliases()) + 1
++        alias2prior_table = torch.zeros(num_aliases_with_pad, entity_symbols.max_candidates+(not args.data_config.train_in_candidates))
++        for alias in entity_symbols.get_all_aliases():
++            # first row for unk alias
++            alias_id = entity_symbols.get_alias_idx(alias)
++            # set all to 0.0 and fill in with real values for padding and fill in with real values
++            prior_list = torch.zeros(entity_symbols.max_candidates+(not args.data_config.train_in_candidates))
++            # set first column to zero
++            # if we are using noncandidate entity, this will remain a 0
++            # if we are not using noncandidate entities, this will get overwritten below.
++            prior_list[0] = 0
++            cands_score = entity_symbols.get_cands_score(alias)
++            prior_list[(not args.data_config.train_in_candidates):len(cands_score)+(not args.data_config.train_in_candidates)] = torch.tensor(cands_score)
++            alias2prior_table[alias_id, :] = prior_list
++        return alias2prior_table.float()
++
+     def forward(self, alias_indices):
+         alias_entity_ids = self.alias2entity_table[alias_indices]
+-        return alias_entity_ids
++        alias_priors = self.alias2prior_table[alias_indices]
++        return alias_entity_ids, alias_priors
+ 
+     def __getstate__(self):
+         state = self.__dict__.copy()
+diff --git bootleg/symbols/entity_symbols.py bootleg/symbols/entity_symbols.py
+index 63b3341..ef4cf9a 100644
+--- bootleg/symbols/entity_symbols.py
++++ bootleg/symbols/entity_symbols.py
+@@ -35,6 +35,7 @@ class EntitySymbols:
+             for al in self._alias2qids:
+                 assert len(self._alias2qids[al]) <= self.max_candidates, f"You have a alias {al} that has more than {self.max_candidates} candidates. This can't happen."
+             self._qid2title: Dict[str, str] = qid2title
++            # COMMENT: reason for adding 1 and self._qid2eid inside else loop
+             # Add 1 for the noncand class
+             # We only make these inside the else because of json ordering being nondeterministic
+             # If we load stuff up in self.load() and regenerate these, the eid values may be nondeterministic
+@@ -42,15 +43,19 @@ class EntitySymbols:
+         self._eid2qid: Dict[int, str] = {eid:qid for qid, eid in self._qid2eid.items()}
+         assert -1 not in self._eid2qid, f"-1 can't be an eid"
+         assert 0 not in self._eid2qid, f"0 can't be an eid. It's reserved for null candidate"
++        # COMMENT: 0 is not in self_eid2qid
+         # generate trie of aliases for quick entity generation in sentences (trie generates alias ids, too)
+         self._alias_trie = marisa_trie.Trie(self._alias2qids.keys())
++        self.unk_alias_idx = len(self._alias2qids.keys())
+         # this assumes that eid of 0 is NO_CAND and eid of -1 is NULL entity
+         self.num_entities = len(self._qid2eid)
++        # COMMENT: PAD + NoCand
+         self.num_entities_with_pad_and_nocand = self.num_entities + 2
+ 
+     def dump(self, save_dir, stats=None, args=None):
+         if stats is None:
+             stats = {}
++        # COMMENT: DOUBLE SORT
+         self._sort_alias_cands()
+         utils.ensure_dir(save_dir)
+         utils.dump_json_file(filename=os.path.join(save_dir, "config.json"), contents={"max_candidates":self.max_candidates,
+@@ -114,8 +119,12 @@ class EntitySymbols:
+ 
+     def get_qid_cands(self, alias, max_cand_pad=False):
+         """Get the QID candidates for an alias"""
+-        assert alias in self._alias2qids, f"{alias} not in alias2qid mapping"
+-        res = [qid_pair[0] for qid_pair in self._alias2qids[alias]]
++        # assert alias in self._alias2qids, f"{alias} not in alias2qid mapping"
++        if alias in self._alias2qids:
++            res = [qid_pair[0] for qid_pair in self._alias2qids[alias]]
++        else:
++            # UNK alias
++            res = []
+         if max_cand_pad:
+             res = res + ["-1"]*(self.max_candidates-len(res))
+         return res
+@@ -130,19 +139,33 @@ class EntitySymbols:
+ 
+     def get_eid_cands(self, alias, max_cand_pad=False):
+         """Get the embedding row ids of the candidates for an alias"""
+-        assert alias in self._alias2qids
+-        res = [self._qid2eid[qid_pair[0]] for qid_pair in self._alias2qids[alias]]
++        # assert alias in self._alias2qids
++        if alias in self._alias2qids:
++            res = [self._qid2eid[qid_pair[0]] for qid_pair in self._alias2qids[alias]]
++        else:
++            res = [-1]
+         if max_cand_pad:
+             res = res + [-1]*(self.max_candidates-len(res))
+         return res
+ 
++    def get_cands_score(self, alias, max_cand_pad=False):
++        """Get the candidate prior scores for an alias"""
++        assert alias in self._alias2qids
++        res = [qid_pair[1] for qid_pair in self._alias2qids[alias]]
++        if max_cand_pad:
++            res = res + [0.0]*(self.max_candidates-len(res))
++        return res
++
+     def get_title(self, id):
+         assert id in self._qid2title
+         return self._qid2title[id]
+ 
+     def get_alias_idx(self, alias):
+         """Get the numeric index of an alias"""
+-        return self._alias_trie[alias]
++        if alias in self._alias_trie:
++            return self._alias_trie[alias]
++        else:
++            return self.unk_alias_idx
+ 
+     def get_alias_from_idx(self, alias_idx):
+         """Get the alias from the numeric index"""
+diff --git bootleg/trainer.py bootleg/trainer.py
+index 6503f09..dab7c79 100644
+--- bootleg/trainer.py
++++ bootleg/trainer.py
+@@ -103,6 +103,8 @@ class Trainer:
+             true_entity_class[TYPEPRED][train_utils.get_type_head_name()] = batch["type_labels"].to(self.model_device)
+         # true_entity_class
+         entity_indices = batch['entity_indices'].to(self.model_device)
++        # candid prior scores
++        entity_priors = batch['entity_priors'].to(self.model_device)
+ 
+         # Iterate over preprocessed embedding list and combine them into batch_prep arg. See wiki_dataset class for detailed comment on batch_prep.
+         batch_prepped_data = {}
+@@ -120,6 +122,7 @@ class Trainer:
+             word_indices=batch['word_indices'].to(self.model_device),
+             alias_indices=batch['alias_idx'].to(self.model_device),
+             entity_indices=entity_indices,
++            entity_priors=entity_priors,
+             batch_prepped_data=batch_prepped_data,
+             batch_on_the_fly_data=batch_on_the_fly_data)
+         # calc_loss takes in if this is a training loss or not, the outputs, the labels, and the entity package
+diff --git bootleg/utils/classes/status_reporter.py bootleg/utils/classes/status_reporter.py
+index eb5b7e0..71b90da 100644
+--- bootleg/utils/classes/status_reporter.py
++++ bootleg/utils/classes/status_reporter.py
+@@ -24,12 +24,13 @@ class StatusReporter:
+         self.tb_writer = self.setup_tensorboard(args)
+ 
+     def setup_tensorboard(self, args):
+-        save_folder = os.path.join(train_utils.get_save_folder(args.run_config), "tensorboard")
++        # save_folder = os.path.join(train_utils.get_save_folder(args.run_config), "tensorboard")
++        save_folder = train_utils.get_tensorboard_folder(args.run_config)
+         return SummaryWriter(log_dir=save_folder)
+ 
+     def setup_test_files(self, args):
+         test_files = {}
+-        save_folder = train_utils.get_save_folder(args.run_config)
++        save_folder = train_utils.get_save_folder(args)
+         test_file_tag = args.data_config.test_dataset.file.split('.jsonl')[0]
+         test_file = test_file_tag + "_test_results"
+         test_file += train_utils.get_file_suffix(args)
+@@ -42,7 +43,7 @@ class StatusReporter:
+ 
+     def setup_dev_files(self, args):
+         dev_files = {}
+-        save_folder = train_utils.get_save_folder(args.run_config)
++        save_folder = train_utils.get_save_folder(args)
+         dev_file_tag = args.data_config.dev_dataset.file.split('.jsonl')[0]
+         dev_file = dev_file_tag + "_dev_results"
+         dev_file += train_utils.get_file_suffix(args)
+@@ -54,7 +55,7 @@ class StatusReporter:
+         return dev_files
+ 
+     def setup_loss_file(self, args):
+-        save_folder = train_utils.get_save_folder(args.run_config)
++        save_folder = train_utils.get_save_folder(args)
+         loss_file = "loss_results"
+         loss_file += train_utils.get_file_suffix(args)
+         loss_file += '.jsonl'
+diff --git bootleg/utils/gen_entity_mappings.py bootleg/utils/gen_entity_mappings.py
+index ca2aa2b..7f57a46 100644
+--- bootleg/utils/gen_entity_mappings.py
++++ bootleg/utils/gen_entity_mappings.py
+@@ -27,9 +27,12 @@ def main():
+     with open(args.qid2title) as f:
+         qid2title = ujson.load(f)
+ 
++    # COMMENT: keep topK candidates by ranking score
+     max_alias_len = -1
+     for alias in alias2qids:
+         assert alias.lower() == alias, f'bootleg assumes lowercase aliases in alias candidate maps: {alias}'
++        # filter candidate entities not in the entity set
++        alias2qids[alias] = [x for x in alias2qids[alias] if x[0] in qid2title]
+         # ensure only max_candidates per alias
+         qids = sorted(alias2qids[alias],
+             key = lambda x: (x[1], x[0]), reverse=True)
+diff --git bootleg/utils/logging_utils.py bootleg/utils/logging_utils.py
+index 1a3c318..33ac965 100644
+--- bootleg/utils/logging_utils.py
++++ bootleg/utils/logging_utils.py
+@@ -6,7 +6,7 @@ from bootleg.utils import train_utils
+ 
+ 
+ def get_log_name(args, mode):
+-    log_name = os.path.join(train_utils.get_save_folder(args.run_config), f"log_{mode}")
++    log_name = os.path.join(train_utils.get_save_folder(args), f"log_{mode}")
+     log_name += train_utils.get_file_suffix(args)
+     log_name += f'_gpu{args.run_config.gpu}'
+     return log_name
+diff --git bootleg/utils/train_utils.py bootleg/utils/train_utils.py
+index 8ba08a7..6a5bedf 100644
+--- bootleg/utils/train_utils.py
++++ bootleg/utils/train_utils.py
+@@ -22,16 +22,23 @@ def setup_run_folders(args, mode):
+         start_date = strftime("%Y%m%d")
+         start_time = strftime("%H%M%S")
+         args.run_config.timestamp = "{:s}_{:s}".format(start_date, start_time)
+-        utils.ensure_dir(get_save_folder(args.run_config))
++        utils.ensure_dir(get_save_folder(args))
+     return
+ 
+-def get_save_folder(run_args):
+-    save_folder = os.path.join(run_args.save_dir, run_args.timestamp)
++def get_save_folder(args):
++    # save_folder = os.path.join(run_args.save_dir, "{}_{}".format(run_args.experiment_name, run_args.timestamp))
++    save_folder = os.path.join(args.run_config.save_dir, "{}_{}".format(args.run_config.experiment_name, args.train_config.seed))
+     os.makedirs(save_folder, exist_ok=True)
+     return save_folder
+ 
++def get_tensorboard_folder(run_args):
++    save_folder = os.path.join(run_args.tensorboard_dir, "{}_{}".format(run_args.experiment_name, run_args.timestamp))
++    os.makedirs(save_folder, exist_ok=True)
++    return save_folder
++
++
+ def get_eval_folder(args, file):
+-    return os.path.join(get_save_folder(args.run_config), os.path.basename(file).split('.jsonl')[0], "eval",
++    return os.path.join(get_save_folder(args), os.path.basename(file).split('.jsonl')[0], "eval",
+         os.path.basename(args.run_config.init_checkpoint).replace(".pt", ""))
+ 
+ def is_slicing_model(args):
+diff --git bootleg/utils/utils.py bootleg/utils/utils.py
+index 5129dc1..63992ae 100644
+--- bootleg/utils/utils.py
++++ bootleg/utils/utils.py
+@@ -14,6 +14,7 @@ import pickle
+ import sys
+ import torch
+ from tqdm import tqdm
++import subprocess
+ 
+ 
+ def recursive_transform(x, test_func, transform):
+@@ -175,3 +176,33 @@ def import_class(prefix_string, base_string):
+ 
+ def remove_dots(str):
+     return str.replace(".", "_")
++
++# get gpu memory and utilization usage
++def get_gpu_map():
++    """Get the current gpu usage.
++    Returns
++    -------
++    usage: dict
++        Keys are device ids as integers.
++        Values are memory usage as integers in MB.
++    """
++    result = subprocess.check_output(
++        [
++            'nvidia-smi', '--query-gpu=utilization.gpu,memory.used',
++            '--format=csv,nounits,noheader'
++        ], encoding='utf-8')
++    # print(result)
++    # Convert lines into a dictionary
++    gpu_utilization = [int(x.split(', ')[0]) for x in result.strip().split('\n')]
++    gpu_memory = [int(x.split(', ')[1]) for x in result.strip().split('\n')]
++    gpu_memory_map = dict(zip(range(len(gpu_memory)), gpu_memory))
++    gpu_utilization_map = dict(zip(range(len(gpu_utilization)), gpu_utilization))
++    return gpu_memory_map, gpu_utilization_map
++
++
++def add_data_dir(final_args, args):
++    final_args.data_config.data_dir = os.path.join(args.base_dir, final_args.data_config.data_dir)
++    final_args.data_config.entity_dir = os.path.join(args.base_dir, final_args.data_config.entity_dir)
++    final_args.data_config.emb_dir = os.path.join(args.base_dir, final_args.data_config.emb_dir)
++    final_args.data_config.word_embedding.cache_dir = os.path.join(args.base_dir, final_args.data_config.word_embedding.cache_dir)
++    final_args.run_config.save_dir = os.path.join(args.base_dir, final_args.run_config.save_dir)
+\ No newline at end of file

@@ -1,0 +1,37 @@
+.service-area {
+   .single-services{
+        box-shadow: 0px 22px 57px 0px rgba(34,41,72,0.05);
+        padding: 16px 29px;
+        @include transition(.4s);
+        border-radius: 5px;
+        background: #fff;
+        background-position: right;
+        @media #{$sm}{
+            padding: 16px 40px;
+        }
+        i{
+            font-size: 56px;
+            margin-bottom: 13px;
+            display: block;
+            color: #f3a81a;
+        }
+        p{
+            color: #102039;
+            font-size: 21px;
+            font-weight: 600;
+        }
+       &:hover{
+            background-image: linear-gradient(to left, #ff6d5c, #ff5079, #ff6d5c);
+            background-position: right;
+            background-size: 200%;
+            i{
+
+                color: #fff;
+            }
+            p{
+                color: #fff;
+            }
+       }
+   }
+   
+}

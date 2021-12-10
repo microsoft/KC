@@ -1,0 +1,57 @@
+.support-area{
+    @media #{$xs}{
+        padding-top: 70px;
+        padding-bottom: 70px;
+    }
+    .support-caption{
+        .support-details{
+            color: #fff;
+            padding: 30px 10px 30px 0; 
+        }
+    }
+
+
+    .support-number{
+        .single-contact{
+            background: #C57EFC;
+            width: 240px;
+            height: 168px;
+            display: inline-block;
+            border-radius: 10px;
+            margin: 0 15px;
+            padding: 35px 20px;
+            @media #{$lg}{
+                width: 224px;
+                height: 161px;
+                padding: 35px 20px;
+            }
+            @media #{$sm}{
+                width: 227px;
+                height: 140px;
+                padding: 35px 20px;
+                margin: 0 10px;
+            }
+            @media #{$xs}{
+                margin-bottom: 30px;
+                width: 237px;
+                height: 151px;
+            }
+            .contact-icon{
+                margin-bottom: 24px;
+                i{
+                    color: #fff;
+                    font-size: 36px;
+                }
+                
+            }
+            .contact-number{
+                span{
+                    color: #fff;
+                    font-weight: 500;
+                    font-size: 20px;
+                }
+            }
+        }
+    }
+
+}

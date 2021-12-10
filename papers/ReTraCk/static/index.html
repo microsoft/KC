@@ -1,0 +1,378 @@
+<!doctype html>
+<html class="no-js" lang="zxx">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>ReTraCk Demo</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" type="image/x-icon" href="assets/img/favicon.ico">
+
+    <!-- CSS here -->
+    <!--    <link rel="stylesheet" href="assets/css/bootstrap.min.css">-->
+    <link rel="stylesheet" href="assets/css/mdb.min.css">
+    <link rel="stylesheet" href="assets/css/owl.carousel.min.css">
+    <link rel="stylesheet" href="assets/css/slicknav.css">
+    <link rel="stylesheet" href="assets/css/flaticon.css">
+    <link rel="stylesheet" href="assets/css/progressbar_barfiller.css">
+    <link rel="stylesheet" href="assets/css/gijgo.css">
+    <link rel="stylesheet" href="assets/css/magnific-popup.css">
+    <link rel="stylesheet" href="assets/css/fontawesome-all.min.css">
+    <link rel="stylesheet" href="assets/css/themify-icons.css">
+    <link rel="stylesheet" href="assets/css/slick.css">
+    <link rel="stylesheet" href="assets/css/nice-select.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<!-- ? Preloader Start -->
+<div id="preloader-active" style="display: none;">
+    <div class="preloader d-flex align-items-center justify-content-center">
+        <div class="preloader-inner position-relative">
+            <div class="preloader-circle"></div>
+            <div class="preloader-img pere-text">
+                <img src="assets/img/logo/loder.png" alt="">
+            </div>
+        </div>
+    </div>
+</div>
+<!-- header end -->
+<main>
+    <!-- Hero Area Start-->
+    <div class="slider-area">
+        <div class="single-slider slider-height d-flex align-items-center">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-xl-10 col-lg-11">
+                        <!-- Hero Caption -->
+                        <div class="hero__caption">
+                            <h1>ReTraCk: A Flexible and Efficient Framework for KBQA</h1>
+                        </div>
+                        <!--Hero form -->
+                        <form class="search-box">
+                            <div class="input-form">
+                                <input type="text" placeholder="ASK A QUESTION HERE" id="questionInputArea"
+                                       data-mdb-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                       autocomplete="off">
+                                <ul class="dropdown-menu" aria-labelledby="questionInputArea">
+                                    <li><a class="dropdown-item disabled" href="#">GrailQA</a></li>
+                                    <li><a class="dropdown-item" href="#">what conference was held at back bay events center</a></li>
+                                    <li><a class="dropdown-item" href="#">what manufactured drug have a octagons shape</a></li>
+                                    <li><a class="dropdown-item" href="#">which journal did don slater serve as the editor in chief</a></li>
+                                    <li><a class="dropdown-item" href="#">name the episode of a radio program whose artist is billy taylor</a></li>
+                                    <li><a class="dropdown-item" href="#">what is the name of the exhibition that has the same exhibition curator with venice biennale of architecture taiwan pavillion 2006</a></li>
+                                    <li><a class="dropdown-item disabled" href="#">WebQuestion Simple</a></li>
+                                    <li><a class="dropdown-item" href="#">what does jamaican people speak</a></li>
+                                    <li><a class="dropdown-item" href="#">who is governor of ohio 2011</a></li>
+                                    <li><a class="dropdown-item" href="#">where did the name rome come from</a></li>
+                                    <li><a class="dropdown-item" href="#">where was george washington carver from</a></li>
+                                    <li><a class="dropdown-item" href="#">what town was martin luther king assassinated in</a></li>
+                                </ul>
+                                <!-- icon search -->
+                                <button type="button" class="btn btn-secondary btn-floating btn-lg search-form"
+                                        id="questionSearchBtn">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <!-- icon search -->
+                                <div class="world-form">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="answer-area" style="display:none;">
+<!--    <div id="answer-area">-->
+        <section class="display-text-area">
+            <div class="container box_1170">
+                <h3 class="text-heading">Answer</h3>
+                <div class="accordion-body">
+                    <p id="answer-text-area">
+                    </p>
+                </div>
+            </div>
+        </section>
+        <section class="display-text-area">
+            <div class="container">
+                <h3 class="text-heading">Input Interpretation</h3>
+                <div class="accordion" id="accordionExample">
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingSparql">
+                            <button
+                                    class="accordion-button collapsed"
+                                    type="button"
+                                    data-mdb-toggle="collapse"
+                                    data-mdb-target="#collapseSparql"
+                                    aria-expanded="false"
+                                    aria-controls="collapseSparql">
+                                Prediction SPARQL Query
+                            </button>
+                        </h2>
+                        <div
+                                id="collapseSparql"
+                                class="accordion-collapse collapse"
+                                aria-labelledby="headingSparql">
+                            <div class="accordion-body" id="sparql-area">
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingLogic">
+                            <button
+                                    class="accordion-button collapsed"
+                                    type="button"
+                                    data-mdb-toggle="collapse"
+                                    data-mdb-target="#collapseLogic"
+                                    aria-expanded="false"
+                                    aria-controls="collapseLogic">
+                                Prediction Logic Form
+                            </button>
+                        </h2>
+                        <div
+                                id="collapseLogic"
+                                class="accordion-collapse collapse"
+                                aria-labelledby="headingLogic">
+                            <div class="accordion-body" id="logic-form-area">
+                                <div class="tree">
+                                    <ul><li><a href="#" class="btn btn-default">AND</a><ul><li><a href="#" class="btn btn-default">digicams.camera_color_filter_array_type</a></li><li><a href="#" class="btn btn-default">JOIN</a><ul><li><a href="#" class="btn btn-default">R</a><ul><li><a href="#" class="btn btn-default">digicams.digital_camera.color_filter_array_type</a></li></ul></li><li><a href="#" class="btn btn-default">JOIN</a><ul><li><a href="#" class="btn btn-default">R</a><ul><li><a href="#" class="btn btn-default">digicams.camera_compressed_format.cameras</a></li></ul></li><li><a href="#" class="btn btn-default">m.03q44xr</a></li></ul></li></ul></li></ul></li></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingEntity">
+                            <button
+                                    class="accordion-button"
+                                    type="button"
+                                    data-mdb-toggle="collapse"
+                                    data-mdb-target="#collapseEntity"
+                                    aria-controls="collapseEntity">
+                                Entity Linking Candidates
+                            </button>
+                        </h2>
+                        <div
+                                id="collapseEntity"
+                                class="accordion-collapse collapse show"
+                                aria-labelledby="headingEntity">
+                            <div class="accordion-body">
+                                <p id="entity-text-area">
+                                    who is the current president of
+                                    <a tabindex="0"
+                                       class="btn btn-secondary popover-dismiss"
+                                       role="button"
+                                       data-mdb-placement="top"
+                                       data-mdb-toggle="popover"
+                                       data-mdb-trigger="focus"
+                                       title="Dismissible popover"
+                                       data-mdb-content="And here's some amazing content. It's very engaging. Right?">
+                                        chile
+                                    </a>
+                                    2011
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingRelation">
+                            <button
+                                    class="accordion-button collapsed"
+                                    type="button"
+                                    data-mdb-toggle="collapse"
+                                    data-mdb-target="#collapseRelation"
+                                    aria-expanded="false"
+                                    aria-controls="collapseRelation">
+                                Schema Items (Relation)
+                            </button>
+                        </h2>
+                        <div
+                                id="collapseRelation"
+                                class="accordion-collapse collapse"
+                                aria-labelledby="headingRelation">
+                            <div class="accordion-body">
+                                <div class="progress-table-wrap">
+                                    <div class="progress-table">
+                                        <div class="table-head">
+                                            <div class="serial">#</div>
+                                            <div class="schema">Schema (Relation)</div>
+                                            <div class="percentage">Score</div>
+                                        </div>
+                                        <div id="table-row-rel">
+                                            <div class="table-row">
+                                                <div class="serial">01</div>
+                                                <div class="schema">Canada</div>
+                                                <div class="percentage">
+                                                    <div class="progress">
+                                                        <div class="progress-bar color-1" role="progressbar"
+                                                             style="width: 80%"
+                                                             aria-valuenow="80" aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="table-row">
+                                                <div class="serial">01</div>
+                                                <div class="schema">Canada</div>
+                                                <div class="percentage">
+                                                    <div class="progress">
+                                                        <div class="progress-bar color-1" role="progressbar"
+                                                             style="width: 80%"
+                                                             aria-valuenow="80" aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="table-row">
+                                                <div class="serial">01</div>
+                                                <div class="schema">
+                                                    <p>Canada <a href="#" class="stretched-link">Go somewhere</a></p>
+                                                </div>
+                                                <div class="percentage">
+                                                    <div class="progress">
+                                                        <div class="progress-bar color-1" role="progressbar"
+                                                             style="width: 80%"
+                                                             aria-valuenow="80" aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="table-row">
+                                                <div class="serial">01</div>
+                                                <div class="schema">Canada</div>
+                                                <div class="percentage">
+                                                    <div class="progress">
+                                                        <div class="progress-bar color-1" role="progressbar"
+                                                             style="width: 80%"
+                                                             aria-valuenow="80" aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="table-row">
+                                                <div class="serial">01</div>
+                                                <div class="schema">Canada</div>
+                                                <div class="percentage">
+                                                    <div class="progress">
+                                                        <div class="progress-bar color-1" role="progressbar"
+                                                             style="width: 80%"
+                                                             aria-valuenow="80" aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="table-row">
+                                                <div class="serial">01</div>
+                                                <div class="schema">
+                                                    medicine.routed_drug.marketed_formulationsmedicine.routed_drug.marketed_formulationsmedicine.routed_drug.marketed_formulationsmedicine.routed_drug.marketed_formulationsmedicine.routed_drug.marketed_formulations
+                                                </div>
+                                                <div class="percentage">
+                                                    <div class="progress">
+                                                        <div class="progress-bar color-1" role="progressbar"
+                                                             style="width: 80%"
+                                                             aria-valuenow="80" aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingClass">
+                            <button
+                                    class="accordion-button collapsed"
+                                    type="button"
+                                    data-mdb-toggle="collapse"
+                                    data-mdb-target="#collapseClass"
+                                    aria-expanded="false"
+                                    aria-controls="collapseClass">
+                                Schema Items (Type)
+                            </button>
+                        </h2>
+                        <div
+                                id="collapseClass"
+                                class="accordion-collapse collapse"
+                                aria-labelledby="headingClass">
+                            <div class="accordion-body">
+                                <div class="progress-table-wrap">
+                                    <div class="progress-table">
+                                        <div class="table-head">
+                                            <div class="serial">#</div>
+                                            <div class="schema">Schema (Class)</div>
+                                            <div class="percentage">Score</div>
+                                        </div>
+                                        <div id="table-row-cls">
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+<!-- Scroll Up -->
+<!--<<button type="button" class="btn btn-secondary" id="back-top">-->
+<!--    <a title="Go to Top" href="#"> <i class="fas fa-level-up-alt"></i></a>-->
+<!--</button>-->
+
+<!-- JS here -->
+
+<script src="assets/js/vendor/modernizr-3.5.0.min.js"></script>
+<!-- Jquery, Popper, Bootstrap -->
+<script src="assets/js/vendor/jquery-1.12.4.min.js"></script>
+<script src="assets/js/popper.min.js"></script>
+<!--<script src="assets/js/bootstrap.min.js"></script>-->
+<script src="assets/js/mdb.min.js"></script>
+<!-- Jquery Mobile Menu -->
+<script src="assets/js/jquery.slicknav.min.js"></script>
+
+<!-- Jquery Slick , Owl-Carousel Plugins -->
+<script src="assets/js/owl.carousel.min.js"></script>
+<script src="assets/js/slick.min.js"></script>
+<!-- One Page, Animated-HeadLin -->
+<script src="assets/js/wow.min.js"></script>
+<script src="assets/js/animated.headline.js"></script>
+<script src="assets/js/jquery.magnific-popup.js"></script>
+
+<!-- Date Picker -->
+<script src="assets/js/gijgo.min.js"></script>
+<!-- Nice-select, sticky -->
+<script src="assets/js/jquery.nice-select.min.js"></script>
+<script src="assets/js/jquery.sticky.js"></script>
+<!-- Progress -->
+<script src="assets/js/jquery.barfiller.js"></script>
+
+<!-- counter , waypoint,Hover Direction -->
+<script src="assets/js/jquery.counterup.min.js"></script>
+<script src="assets/js/waypoints.min.js"></script>
+<script src="assets/js/jquery.countdown.min.js"></script>
+<script src="assets/js/hover-direction-snake.min.js"></script>
+
+<!-- contact js -->
+<script src="assets/js/contact.js"></script>
+<script src="assets/js/jquery.form.js"></script>
+<script src="assets/js/jquery.validate.min.js"></script>
+<script src="assets/js/mail-script.js"></script>
+<script src="assets/js/jquery.ajaxchimp.min.js"></script>
+
+<!-- Jquery Plugins, main Jquery -->
+<script src="assets/js/plugins.js"></script>
+<script src="assets/js/main.js"></script>
+
+</body>
+</html>

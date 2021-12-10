@@ -1,0 +1,17 @@
+{
+  "dataset_name": "GrailQA",
+  "eval_file":  "./Dataset/GrailQA/processed/dev.json",
+  "model_file":  "./Parser/grailqa_model.tar.gz",
+  "roles_file":  "./Parser/graph_match/fb_roles.txt",
+  "types_file":  "./Parser/graph_match/fb_types.txt",
+  "reverse_properties_file":  "./Parser/graph_match/reverse_properties.txt",
+  "semantic_constraints_file":  "./Parser/constraint/SRO_COM_SC.filter.pkl",
+  "literal_relations_file": "./Parser/constraint/Literal_Relation.pkl",
+  "output_path": "./Output",
+  "use_beam_check": "True",
+  "use_virtual_forward": "True",
+  "use_type_checking": "True",
+  "use_entity_anchor": "True",
+  "eval_f1": "True",
+  "eval_hits1": "True"
+}

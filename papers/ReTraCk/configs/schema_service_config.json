@@ -1,0 +1,213 @@
+{
+    "model": {
+        "normalized_relation": "./KBSchema/DenseRetriever/freebase_relation_f2original",
+        "normalized_class": "./KBSchema/DenseRetriever/freebase_class_f2original",
+        "GrailQA": {
+            "Relation": {
+                "test_entities": null,
+                "test_mentions": null,
+                "interactive": false,
+                "top_k": 200,
+                "biencoder_model": "./KBSchema/DenseRetriever/GrailQA/Relation/pytorch_model.bin",
+                "biencoder_config": "./KBSchema/DenseRetriever/GrailQA/Relation/training_params.txt",
+                "entity_encoding": "./KBSchema/DenseRetriever/GrailQA/Relation/relation_emb.t7",
+                "entity_catalogue": "./KBSchema/DenseRetriever/relation_commons.jsonl",
+                "fast": true,
+                "faiss_index": null,
+                "index_path": null,
+                "bert_model": "bert-base-uncased",
+                "output_path": "./Output/logs/",
+                "no_cuda": false
+            },
+            "Class": {
+                "test_entities": null,
+                "test_mentions": null,
+                "interactive": false,
+                "top_k": 200,
+                "biencoder_model": "./KBSchema/DenseRetriever/GrailQA/Class/pytorch_model.bin",
+                "biencoder_config": "./KBSchema/DenseRetriever/GrailQA/Class/training_params.txt",
+                "entity_encoding": "./KBSchema/DenseRetriever/GrailQA/Class/class_emb.t7",
+                "entity_catalogue": "./KBSchema/DenseRetriever/class_commons.jsonl",
+                "fast": true,
+                "faiss_index": null,
+                "index_path": null,
+                "bert_model": "bert-base-uncased",
+                "output_path": "./Output/logs/",
+                "no_cuda": false
+            }
+        },
+        "WebQSP": {
+            "Relation": {
+                "test_entities": null,
+                "test_mentions": null,
+                "interactive": false,
+                "top_k": 200,
+                "biencoder_model": "./KBSchema/DenseRetriever/WebQSP/Relation/pytorch_model.bin",
+                "biencoder_config": "./KBSchema/DenseRetriever/WebQSP/Relation/training_params.txt",
+                "entity_encoding": "./KBSchema/DenseRetriever/WebQSP/Relation/relation_emb.t7",
+                "entity_catalogue": "./KBSchema/DenseRetriever/relation.jsonl",
+                "fast": true,
+                "faiss_index": null,
+                "index_path": null,
+                "bert_model": "bert-base-uncased",
+                "output_path": "./Output/logs/",
+                "no_cuda": false
+            },
+            "Class": {
+                "test_entities": null,
+                "test_mentions": null,
+                "interactive": false,
+                "top_k": 50,
+                "biencoder_model": "./KBSchema/DenseRetriever/WebQSP/Class/pytorch_model.bin",
+                "biencoder_config": "./KBSchema/DenseRetriever/WebQSP/Class/training_params.txt",
+                "entity_encoding": "./KBSchema/DenseRetriever/WebQSP/Class/class_emb.t7",
+                "entity_catalogue": "./KBSchema/DenseRetriever/class.jsonl",
+                "fast": true,
+                "faiss_index": null,
+                "index_path": null,
+                "bert_model": "bert-base-uncased",
+                "output_path": "./Output/logs/",
+                "no_cuda": false
+            }
+        }
+    },
+    "train": {
+        "silent": false,
+        "debug": false,
+        "data_parallel": false,
+        "no_cuda": false,
+        "top_k": 10,
+        "seed": 52313,
+        "zeshel": true,
+        "max_seq_length": 256,
+        "max_context_length": 50,
+        "max_cand_length": 50,
+        "path_to_model": null,
+        "bert_model": "bert-base-uncased",
+        "pull_from_layer": -1,
+        "lowercase": true,
+        "context_key": "context",
+        "out_dim": 1,
+        "add_linear": false,
+        "data_path": "./Dataset/WebQSP/to-train-placeholder",
+        "output_path": "./Output/WebQSP/model/",
+        "evaluate": false,
+        "output_eval_file": null,
+        "train_batch_size": 16,
+        "eval_batch_size": 1,
+        "max_grad_norm": 1.0,
+        "learning_rate": 1e-05,
+        "num_train_epochs": 10,
+        "print_interval": 5,
+        "eval_interval": 1000,
+        "save_interval": 1,
+        "warmup_proportion": 0.1,
+        "gradient_accumulation_steps": 1,
+        "type_optimization": "all_encoder_layers",
+        "shuffle": false
+    },
+    "generate_emb": {
+        "GrailQA": {
+            "Relation": {
+                "output_path": "./KBSchema/DenseRetriever/GrailQA/Relation/relation_emb.t7",
+                "path_to_model": "./KBSchema/DenseRetriever/GrailQA/Relation/pytorch_model.bin",
+                "cand_encode_path": "./KBSchema/DenseRetriever/GrailQA/Relation/relation_emb.t7",
+                "cand_to_encode": "./KBSchema/DenseRetriever/relation_commons.jsonl"
+            },
+            "Class": {
+                "output_path": "./KBSchema/DenseRetriever/GrailQA/Class/class_emb.t7",
+                "path_to_model": "./KBSchema/DenseRetriever/GrailQA/Class/pytorch_model.bin",
+                "cand_encode_path": "./KBSchema/DenseRetriever/GrailQA/Class/class_emb.t7",
+                "cand_to_encode": "./KBSchema/DenseRetriever/class_commons.jsonl"
+            }
+        },
+        "WebQSP": {
+            "Relation": {
+                "output_path": "./KBSchema/DenseRetriever/WebQSP/Relation/relation_emb.t7",
+                "path_to_model": "./KBSchema/DenseRetriever/WebQSP/Relation/pytorch_model.bin",
+                "cand_encode_path": "./KBSchema/DenseRetriever/WebQSP/Relation/relation_emb.t7",
+                "cand_to_encode": "./KBSchema/DenseRetriever/relation.jsonl"
+            },
+            "Class": {
+                "output_path": "./KBSchema/DenseRetriever/WebQSP/Class/class_emb.t7",
+                "path_to_model": "./KBSchema/DenseRetriever/WebQSP/Class/pytorch_model.bin",
+                "cand_encode_path": "./KBSchema/DenseRetriever/WebQSP/Class/class_emb.t7",
+                "cand_to_encode": "./KBSchema/DenseRetriever/class.jsonl"
+            }
+        }
+    },
+    "predict": {
+        "Relation": "./KBSchema/DenseRetriever/freebase_relation_f2original",
+        "Class": "./KBSchema/DenseRetriever/freebase_class_f2original",
+        "GrailQA": {
+            "input_file": "./Dataset/GrailQA/retrackFormat/topredict",
+            "res_path": "./Output/GrailQA/predictions",
+            "Relation": {
+                "entity_encoding": "./KBSchema/DenseRetriever/GrailQA/Relation/relation_emb.t7",
+                "path_to_model": "./KBSchema/DenseRetriever/GrailQA/Relation/pytorch_model.bin",
+                "biencoder_model": "./KBSchema/DenseRetriever/GrailQA/Relation/pytorch_model.bin",
+                "biencoder_config": "./KBSchema/DenseRetriever/GrailQA/Relation/training_params.txt",
+                "entity_catalogue": "./KBSchema/DenseRetriever/relation_commons.jsonl",
+				"test_entities": null,
+                "test_mentions": null,
+                "interactive": false,
+   				"no_cuda": false,
+                "top_k": 200,
+                "fast": true,
+                "faiss_index": null,
+                "output_path": "./Output/logs/",
+                "index_path": null,
+                "bert_model": "bert-base-uncased"
+            },
+            "Class": {
+                "entity_encoding": "./KBSchema/DenseRetriever/GrailQA/Class/class_emb.t7",
+                "path_to_model": "./KBSchema/DenseRetriever/GrailQA/Class/pytorch_model.bin",
+                "biencoder_model": "./KBSchema/DenseRetriever/GrailQA/Class/pytorch_model.bin",
+                "biencoder_config": "./KBSchema/DenseRetriever/GrailQA/Class/training_params.txt",
+                "entity_catalogue": "./KBSchema/DenseRetriever/class_commons.jsonl",
+                "test_mentions": null,
+                "interactive": false,
+                "top_k": 200,
+                "fast": true,
+                "faiss_index": null,
+                "output_path": "./Output/logs/",
+                "index_path": null,
+                "bert_model": "bert-base-uncased"
+            }
+        },
+        "WebQSP": {
+            "input_file": "./Dataset/WebQSP/retrackFormat/topredict",
+            "res_path": "./Output/WebQSP/predictions",
+            "Relation": {
+                "entity_encoding": "./KBSchema/DenseRetriever/WebQSP/Relation/relation_emb.t7",
+                "path_to_model": "./KBSchema/DenseRetriever/WebQSP/Relation/pytorch_model.bin",
+                "biencoder_model": "./KBSchema/DenseRetriever/WebQSP/Relation/pytorch_model.bin",
+                "biencoder_config": "./KBSchema/DenseRetriever/WebQSP/Relation/training_params.txt",
+                "entity_catalogue": "./KBSchema/DenseRetriever/relation.jsonl",
+                "test_mentions": null,
+                "interactive": false,
+                "top_k": 200,
+                "fast": true,
+                "faiss_index": null,
+                "output_path": "./Output/logs/",
+                "index_path": null,
+                "bert_model": "bert-base-uncased"
+            },
+            "Class": {
+                "entity_encoding": "./KBSchema/DenseRetriever/WebQSP/Class/class_emb.t7",
+                "path_to_model": "./KBSchema/DenseRetriever/WebQSP/Class/pytorch_model.bin",
+                "biencoder_config": "./KBSchema/DenseRetriever/WebQSP/Class/training_params.txt",
+                "entity_catalogue": "./KBSchema/DenseRetriever/class.jsonl",
+                "test_mentions": null,
+                "interactive": false,
+                "top_k": 200,
+                "fast": true,
+                "faiss_index": null,
+                "output_path": "./Output/logs/",
+                "index_path": null,
+                "bert_model": "bert-base-uncased"
+            }
+        }
+    },
+    "port" : 6200
+}

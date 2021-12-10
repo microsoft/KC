@@ -1,0 +1,118 @@
+{
+    "run_config": {
+        "dataset_threads": 1,
+        "loglevel": "debug",
+        "max_epochs": 5,
+        "eval_batch_size": 32,
+        "log_steps": 100,
+        "eval_steps": 5000,
+        "perc_eval": 1.0,
+//        "dist_url": "tcp://127.0.0.1:8001",
+//        "distributed": true,
+        "distributed": false,
+//        "ngpus_per_node": 4,
+        "ngpus_per_node": 1,
+        "nodes": 1
+    },
+    "train_config": {
+        "dropout": 0.1,
+        "lr": 0.0001,
+        "weight_decay": 1e-05,
+//        "batch_size": 32,
+        "batch_size": 16,
+        "seed": 2345
+    },
+    "model_config": {
+		"ff_inner_size": 512,
+        "hidden_size": 128,
+        "num_fc_layers": 1,
+        "num_heads": 8,
+        "num_model_stages": 2,
+        "use_prior": true,
+//        "use_prior": false,
+        "combine_prior_hidden_size": 100
+    },
+    "data_config": {
+        "overwrite_preprocessed_data": false,
+        "ent_embeddings": [
+            {
+                "key": "learned",
+                "load_class": "LearnedEntityEmb",
+                "args": {
+                    "learned_embedding_size": 256,
+                    "mask_perc": 0.8
+                }
+            },
+            {
+                "key": "avg_title_proj",
+                "load_class": "AvgTitleEmbProj",
+                "freeze": false,
+                "args": {
+                    "freeze_word_emb_for_titles": true,
+                    "merge_func": "average"
+                }
+            },
+           {
+               "key": "learned_type",
+               "load_class": "LearnedTypeEmb",
+               "args": {
+                   "type_labels": "qid2types.json",
+                   "max_types": 3,
+                   "type_dim": 128,
+                   "merge_func": "addattn",
+                   "attn_hidden_size": 128
+               }
+           },
+           {
+               "key": "adj_index",
+               "dim": -1,
+               "load_class": "KGIndices",
+               "batch_on_the_fly": true,
+               "dtype": "int16",
+               "args": {
+                   "kg_adj": "kg_conn.txt",
+                   "mask": true
+               }
+           },
+           {
+               "key": "learned_type_relations",
+               "load_class": "LearnedTypeEmb",
+               "freeze": false,
+               "args": {
+                   "type_labels": "qid2relations.json",
+                   "max_types": 50,
+                   "type_dim": 128,
+                   "merge_func": "addattn",
+                   "attn_hidden_size": 128
+               }
+		   }
+        ],
+        "data_dir": "data/grailQA_text_data",
+        "emb_dir": "data/grailQA_bert_ner_embed_data",
+        "entity_dir": "data/grailQA_bert_ner_entity_data",
+        "entity_map_dir": "entity_mappings",
+        "train_dataset":{
+            "file": "train_bootleg_data_filter.jsonl",
+            "use_weak_label": true
+        },
+        "dev_dataset":{
+            "file": "dev_bootleg_data_nofilter.jsonl",
+            "use_weak_label": true
+        },
+        "test_dataset":{
+            "file": "dev_bootleg_data_nofilter.jsonl",
+            "use_weak_label": true
+        },
+        "max_aliases": 10,
+        "train_in_candidates": true,
+        "max_word_token_len": 100,
+        "word_embedding": {
+            "cache_dir": "pretrained_bert_models",
+            "layers": 12,
+            "load_class": "bert_word_emb.BERTWordEmbedding",
+            "sent_class": "bert_sent_emb.BERTSentEmbedding",
+            "use_lower_case": true,
+            "word_symbols": "BERTWordSymbols"
+        }
+    }
+}
