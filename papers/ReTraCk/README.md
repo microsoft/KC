@@ -88,12 +88,10 @@ The ```make install``` is optional`, if you don't want Redis system-available.
  
 ### Downloading ReTraCk resources
 
-#### Redis dump files
-
-#### Model checkpoints
+Model checkpoints, Redis dump files, and other necessary files to run the demo can be downloaded from [Azure storage](https://kcpapers.blob.core.windows.net/retrack-acl2021/ReTraCkDemoFiles.zip) (**40GB** compressed file). Please extract the downloaded file to a local directory to be used in the system setup below. Notes on how to re-generate all files will be updated in this repository soon.
 
 #### Datasets
-We conduct the experiments on two datasets: [GrailQA](https://dl.orangedox.com/WyaCpL/) and [WebQuestionsSP] (https://www.microsoft.com/en-us/download/details.aspx?id=52763). Both datasets follow the same format of GrailQA. We appreciate Gu Yu, the author of [GrailQA](https://dki-lab.github.io/GrailQA/), who provides us with the pre-processed WebQuestionsSP.
+We conduct experiments over two datasets: [GrailQA](https://dl.orangedox.com/WyaCpL/) and [WebQuestionsSP](https://www.microsoft.com/en-us/download/details.aspx?id=52763). Both datasets follow the same format of GrailQA. We really appreciate Gu Yu, the author of [GrailQA](https://dki-lab.github.io/GrailQA/), for providing us the pre-processed WebQuestionsSP dataset.
 
 ### Demo Setup
 
