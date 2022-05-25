@@ -28,7 +28,7 @@ tqdm
 prettytable
 
 # Tokenization
-nltk==3.4.5
+nltk==3.6.6
 
 # REST API
 Flask==1.1.1
