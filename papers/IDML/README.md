@@ -2,7 +2,7 @@
 
 This repository contains the open-sourced official implementation of the paper
 
-[On the Effectiveness of Sentence Encoding for Intent Detection Meta-Learning]() (NAACL 2022).   
+[On the Effectiveness of Sentence Encoding for Intent Detection Meta-Learning](https://openreview.net/pdf?id=SzGx4ZQfHZq) (NAACL 2022).   
 _Tingting Ma, Qianhui Wu, Zhiwei Yu, Tie-jun Zhao and Chin-Yew Lin_
 
 If you find this repo helpful, please cite the following paper
