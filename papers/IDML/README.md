@@ -10,11 +10,10 @@ If you find this repo helpful, please cite the following paper
 @inproceedings{ma-etal-2022-intentemb,
     title = {On the Effectiveness of Sentence Encoding for Intent Detection Meta-Learning},
     author = {Tingting Ma and Qianhui Wu and Zhiwei Yu and Tiejun Zhao and Chin-Yew Lin},
-    booktitle = {xxx},
+    booktitle = {2022 Annual Conference of the North American Chapter of the Association for Computational Linguistics (NAACL 2022)},
     year = {2022},
-    publisher = {xxx},
-    url = {xxx},
-    pages = {xxx}
+    publisher = {Association for Computational Linguistics},
+    url = {https://openreview.net/pdf?id=SzGx4ZQfHZq}
 }
 ```
 
@@ -25,8 +24,8 @@ For any questions/comments, please feel free to open GitHub issues or email the 
 ```
 pip install -r requirements.txt 
 ```
-Note that we conduct our experiments with python3.7, and if you want to use this code with python3.9 and numpy 1.21.0, please upgrade the sentencepiece to 0.1.94.
-
+The original experiments were conducted with Python 3.7, numpy 1.21.0, and sentencepiece 0.1.94; which now have security vulneralibilities. Please try reverting to those versions in case of any problem.
+  
 ## Download datasets  
 
 For convenience, you can download the intent dataset splits from [this repo](https://github.com/tdopierre/ProtAugment/tree/main/data) and put the downloaded data into `data` folder.
@@ -76,4 +75,22 @@ This repository leverages open-sourced work from multiple sources. We thank the 
 - [https://github.com/jwieting/paraphrastic-representations-at-scale](https://github.com/jwieting/paraphrastic-representations-at-scale);
 - [https://github.com/UKPLab/sentence-transformers](https://github.com/UKPLab/sentence-transformers);
 - [https://github.com/JohnGiorgi/DeCLUTR](https://github.com/JohnGiorgi/DeCLUTR);
-- [https://github.com/princeton-nlp/SimCSE](https://github.com/princeton-nlp/SimCSE)  
+- [https://github.com/princeton-nlp/SimCSE](https://github.com/princeton-nlp/SimCSE)
+
+## Contributing
+
+This project welcomes contributions and suggestions. Most contributions require you to agree to a
+Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+the rights to use your contribution. For details, visit httpscla.opensource.microsoft.com.
+
+When you submit a pull request, a CLA bot will automatically determine whether you need to provide
+a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
+provided by the bot. You will only need to do this once across all repos using our CLA.
+
+This project has adopted the [Microsoft Open Source Code of Conduct](httpsopensource.microsoft.comcodeofconduct).
+For more information see the [Code of Conduct FAQ](httpsopensource.microsoft.comcodeofconductfaq) or
+contact [opencode@microsoft.com](mailtoopencode@microsoft.com) with any additional questions or comments.
+
+
+
+  

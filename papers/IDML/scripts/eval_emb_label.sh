@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
+
 # evaluate protonet or protaugment, need specify the trained roberta-base model path as output-path
 # dataset=BANKING77
 # for K in 1 5; do
