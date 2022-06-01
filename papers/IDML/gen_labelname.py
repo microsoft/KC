@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
+
 import os, json
 
 def generate_labels(input_fn, output_fn):
