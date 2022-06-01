@@ -1,0 +1,9 @@
+numpy==1.22.3
+pandas==1.2.0
+sacremoses==0.0.43
+sentence_transformers==1.2.0
+sentencepiece==0.1.96
+tensorboardX==2.5
+tensorflow_hub==0.12.0
+tqdm==4.49.0
+transformers==4.2.1
