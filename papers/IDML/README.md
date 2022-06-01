@@ -28,7 +28,12 @@ The original experiments were conducted with Python 3.7, numpy 1.21.0, and sente
   
 ## Download datasets  
 
-For convenience, you can download the intent dataset splits from [this repo](https://github.com/tdopierre/ProtAugment/tree/main/data) and put the downloaded data into `data` folder.
+For convenience, you can download the intent dataset splits from [this repo](https://github.com/tdopierre/ProtAugment/tree/main/data) and put the downloaded data into `data` folder. Then run
+
+```
+python gen_labelname.py
+```
+
 
 ## Download models
 
