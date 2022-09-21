@@ -130,8 +130,9 @@ We conduct experiments over two datasets: [GrailQA](https://dl.orangedox.com/Wya
 4. Run the demo parser of interest (e.g., GrailQA)
    
    ```bash
-   cd parser 
-   python demo.py --config_path ./retrack/configs/demo_grailqa.json
+   # cd parser 
+   export PYTHONPATH=.
+   python parser/demo.py --config_path ./retrack/configs/demo_grailqa.json
    ```    
 
 ## Evaluation

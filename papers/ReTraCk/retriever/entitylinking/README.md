@@ -27,6 +27,11 @@ bash retriever/entitylinking/train_ner.sh WebQSP
 ```
 2. Bootleg
 Please see retriever/entitylinking/bootleg/aml.ipynb on how to submit jobs on AML to train a Bootleg model. 
+```shell
+conda activate bootleg
+python bootleg/bootleg_aml/run.py --config_script configs/grailqa_config.json --mode "train" --base_dir  --experiment_name --tensorboard_dir
+```
+
 
 #### Evaluation
 

@@ -9,7 +9,7 @@
   "topk": 3,
   "schema_meta_info_fn": "./KBSchema/EntityLinking/schema_meta_info.pkl",
   "world": "GrailQA",
-  "kb_store_host": "127.0.1.1",
+  "kb_store_host": "localhost",
   "entity_meta_port": 6386,
   "in_relation_port": 6387,
   "out_relation_port": 6388,
