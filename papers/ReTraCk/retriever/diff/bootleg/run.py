@@ -2,6 +2,7 @@
 # Licensed under the MIT license.
 import subprocess
 import argparse
+import os
 
 def run_command(bash_command):
     process = subprocess.Popen(bash_command.split())
@@ -31,6 +32,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print("RUN python setup.py develop")
     run_command("python setup.py develop")
+    if not os.path.exists(args.tensorboard_dir):
+        os.mkdir(args.tensorboard_dir)
     cmd = f"python bootleg/run.py --config_script {args.config_script} --mode {args.mode} --base_dir {args.base_dir} --experiment_name {args.experiment_name} --tensorboard_dir {args.tensorboard_dir}"
     print("RUN {}".format(cmd))
     run_command(cmd)
