@@ -86,6 +86,8 @@ The ```make install``` is optional`, if you don't want Redis system-available.
 
 ## Configuring ReTraCk
 
+### Downloading ReTraCk resources
+
 #### Datasets
 We conduct experiments over two datasets: [GrailQA](https://dl.orangedox.com/WyaCpL/) and [WebQuestionsSP](https://www.microsoft.com/en-us/download/details.aspx?id=52763). Both datasets follow the same format of GrailQA. We really appreciate Gu Yu, the author of [GrailQA](https://dki-lab.github.io/GrailQA/), for providing us the pre-processed WebQuestionsSP dataset.
 
