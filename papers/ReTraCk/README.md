@@ -101,6 +101,7 @@ We conduct experiments over two datasets: [GrailQA](https://dl.orangedox.com/Wya
     export RETRACK_HOME="{ReTraCk repo clone location}"
     export DATA_PATH="{path to the downloaded data}"
     export VIRTUOSO_PATH="{Virtuoso install directory}"
+    export PYTHONPATH=.
     ```
 
 1. Setup dependencies and launch endpoints for relevant services (Redis, SPARQL, NER)
@@ -131,7 +132,6 @@ We conduct experiments over two datasets: [GrailQA](https://dl.orangedox.com/Wya
    
    ```bash
    # cd parser 
-   export PYTHONPATH=.
    python parser/demo.py --config_path ./retrack/configs/demo_grailqa.json
    ```    
 
