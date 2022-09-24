@@ -21,7 +21,7 @@ echo "Copying assets to ReTraCk location"
 /bin/cp -rf scripts/ ../ListQA/retriever/schema_retriever/dense_retriever/
 
 /bin/cp -rf ../ListQA/retriever/diff/get_candidate_emb.py ../ListQA/retriever/schema_retriever/dense_retriever/blink/biencoder/get_candidate_emb.py
-/bin/cp -rf ../ListQA/retriever/diff/evaluate_relation.py ../ListQA//retriever/schema_retriever/dense_retriever/elq/evaluate_relation.py
+/bin/cp -rf ../ListQA/retriever/diff/evaluate_relation.py ../ListQA/retriever/schema_retriever/dense_retriever/elq/evaluate_relation.py
 
 echo "Cleanup..."
 

@@ -85,7 +85,7 @@ make install
 The ```make install``` is optional`, if you don't want Redis system-available.
 
 ## Configuring ReTraCk
- 
+
 ### Downloading ReTraCk resources
 
 Model checkpoints, Redis dump files, and other necessary files to run the demo can be downloaded from [Azure storage](https://kcpapers.blob.core.windows.net/retrack-acl2021/ReTraCkDemoFiles.zip) (**40GB** compressed file). Please extract the downloaded file to a local directory to be used in the system setup below. Notes on how to re-generate all files will be updated in this repository soon.
@@ -176,7 +176,51 @@ Inference will generate Class and Relation predictions, along with merged result
 
 ### Use ReTraCkRetriever in your codebase
 
-For examples on how to use ReTraCkRetriever in your code base, please check /tests/debug/launch_schema_retriever.py and [TRAIN.MD](TRAIN.MD). 
+For examples on how to use ReTraCkRetriever in your code base, please check /tests/debug/launch_schema_retriever.py
+
+## Training Instructions
+
+### Entity Linking for ReTraCk
+
+1. NER
+
+Please replace "dataset" below with "GrailQA" or "WebQSP"
+```
+conda activate retrack_env
+bash retriever/entitylinking/train_ner.sh dataset
+```
+
+2. Bootleg
+
+train the model
+
+### Schema Retriever for ReTraCk
+
+You can directly call the function train in ReTraCk/retriever/schema_retriever/interface.py. Or you can call in python environment like this:
+
+```python
+from retriever.schema_retriever.interface import DenseSchemaRetriever
+
+sr = DenseSchemaRetriever("your config file")  # Initialize with your config, default config file is /ReTraCk/configs/schema_service_config.json
+
+sr.train()  # train the schema_retriever
+sr.generate_emb("World", "Type")  # Generate the embedding for the target labels.
+sr.predict("World", "Type")  # load a trained model to evaluate the file assigned in the config.
+```
+If you want to train your own dense retriever, please use dataset/scripts/pack_train_data.py to generate the training data and use pack_test_data.py to generate the test data. /ReTraCk/configs/schema_service_config.json keeps our settings. If you do not want to load previous demo_models, you can comments L38 in ReTraCk/retriever/schema_retriever/interface.py and call the functions you need.k
+
+### Train your Parser
+
+If you use PyCharm, please firstly set `parser` as Sources Root. And then directly train a model via running `train.py`. Or you can run with the following command:
+
+```bash
+python train.py --serialization_dir <serialization_dir> --train_data_path <train_data_path> --validation_data_path <validation_data_path>
+```
+
+- `serialization_dir`: the folder where your trained parser will store in
+- `train_data_path`: the training data path for semantic parser
+- `validation_data_path`: the validation data path for semantic parser
+
 
 ## License
 The ReTrack Demo code is MIT licensed. See the [LICENSE](LICENSE) file for details.
