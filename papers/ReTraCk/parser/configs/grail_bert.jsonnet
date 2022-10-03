@@ -50,8 +50,8 @@
 			"type": "dot_product"
 		},
 		"dropout_rate": 0.1,
-		"maximum_negative_chunk": 4,
-		"maximum_negative_cand": 150,
+		"maximum_negative_chunk": 5,
+		"maximum_negative_cand": 200,
 		"dynamic_negative_ratio": 1.0,
 		"utterance_agg_method": "first",
 		"entity_order_method": "shuffle",
@@ -73,9 +73,8 @@
 		}
 	},
 	"trainer": {
-		"num_epochs": 100,
+		"num_epochs": 10,
 		"cuda_device": 0,
-		"patience": 100,
 		"num_gradient_accumulation_steps": 1,
 		"validation_metric": "+avg_exact_match",
 		"optimizer": {

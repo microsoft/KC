@@ -291,10 +291,10 @@ def count_entity_len_distribution(data_file):
             tokenized_utterance = [Token(text=t.text, lemma_=t.lemma_) if t.lemma_ != '-PRON-'
                                    else Token(text=t.text, lemma_=t.text) for t in tokenized_utterance]
             kb_context = KBContext(tokenizer=tokenizer,
-                                        utterance=tokenized_utterance,
-                                        entity_list=entity_list,
-                                        encode_method="all_domain",
-                                        relation_list=relation_list)
+                                   utterance=tokenized_utterance,
+                                   entity_list=entity_list,
+                                   encode_method="all_domain",
+                                   relation_list=relation_list)
             ind = 0
             for entity_token in kb_context.entity_tokens:
                 struct_lengths.append(len(entity_token))
