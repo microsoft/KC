@@ -75,7 +75,10 @@
 	"trainer": {
 		"num_epochs": 10,
 		"cuda_device": 0,
-		"num_gradient_accumulation_steps": 1,
+		"num_gradient_accumulation_steps": 20,
+		"checkpointer": {
+        	"num_serialized_models_to_keep": 0
+        },
 		"validation_metric": "+avg_exact_match",
 		"optimizer": {
 			"type": "adam",
@@ -85,11 +88,17 @@
 						".*text_embedder.*"
 					],
 					{
-						"lr": 1e-5
+						"lr": 2e-5
 					}
 				]
 			],
 			"lr": 1e-3
-		}
+		},
+		"learning_rate_scheduler": {
+            "type": "reduce_on_plateau",
+        	"factor": 0.5,
+        	"mode": "max",
+        	"patience": 5
+        }
 	}
 }

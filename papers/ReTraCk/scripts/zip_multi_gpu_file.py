@@ -49,10 +49,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--in-dir",
                         type=str,
-                        default="/home/t-shuche/mycontainer/v-shuach/ReTraCk/Dataset/GrailQA/processed")
+                        required=True)
     parser.add_argument("--out-dir",
                         type=str,
-                        default="/home/t-shuche/mycontainer/v-shuach/ReTraCk/Dataset/GrailQA/zip")
+                        required=True)
+    parser.add_argument("--batch_size_per_card",
+                        type=int,
+                        default=3)
+    parser.add_argument("--gpu_num",
+                        type=int,
+                        default=4)
     args = parser.parse_args()
     if os.path.exists(args.out_dir):
         os.mkdir(args.out_dir)
