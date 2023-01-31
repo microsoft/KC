@@ -2,7 +2,7 @@
 
 This repository contains the open-sourced official implementation of the paper
 
-[TIARA: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Base](https://arxiv.org/abs/2210.12925). Published at EMLP 2022.
+[TIARA: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Base](https://arxiv.org/abs/2210.12925). Published at EMNLP 2022.
 
 [[poster](./docs/EMNLP22poster.pdf)] [[slides](./docs/EMNLP22slides.pdf)] [[video](https://kcpapers.blob.core.windows.net/tiara-emnlp2022/EMNLP22.mp4)]
 
@@ -16,7 +16,7 @@ If you find this paper or code useful, please cite the following paper:
 @article{shu2022tiara,
   title={{TIARA}: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Bases},
   author={Shu, Yiheng and Yu, Zhiwei and Li, Yuhan and Karlsson, B{\"o}rje F. and Ma, Tingting and Qu, Yuzhong and Lin, Chin-Yew},
-  booktitle = {Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing (EMLP 20022)},
+  booktitle = {Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing (EMNLP 2022)},
   month = dec,
   year={2022}
   address = "Online",
