@@ -1,183 +1,284 @@
-# ReTraCk: A Flexible and Efficient Framework for Knowledge Base Question Answering
+# TIARA
 
-This repository contains the open-sourced official implementation of the paper
+Code for EMNLP 2022 paper: **TIARA: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Base**.
 
-[ReTraCk: A Flexible and Efficient Framework for Knowledge Base Question Answering](https://aclanthology.org/2021.acl-demo.39.pdf/) (ACL-IJCNLP 2021 - Demo).
-_Shuang Chen*, Qian Liu*, Zhiwei Yu*, Chin-Yew Lin, Jian-Guang Lou and Feng Jiang_
+[[PDF](https://arxiv.org/abs/2210.12925)] [[poster](https://yihengshu.github.io/homepage/EMNLP22poster.pdf)] [[slides](https://yihengshu.github.io/homepage/EMNLP22slides.pdf)] [[video](https://s3.amazonaws.com/pf-user-files-01/u-59356/uploads/2022-11-04/fr03tjr/EMNLP22.mp4)]
 
-If you find this repo helpful, please cite the following paper
+![TIARA.png](TIARA.png)
 
-```bib
-@inproceedings{chen-etal-2021-retrack,
-    title = "{R}e{T}ra{C}k: A Flexible and Efficient Framework for Knowledge Base Question Answering",
-    author = "Chen, Shuang  and
-      Liu, Qian  and
-      Yu, Zhiwei  and
-      Lin, Chin-Yew  and
-      Lou, Jian-Guang  and
-      Jiang, Feng",
-    booktitle = "Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing: System Demonstrations",
-    month = aug,
-    year = "2021",
-    address = "Online",
-    publisher = "Association for Computational Linguistics",
-    url = "https://aclanthology.org/2021.acl-demo.39",
-    doi = "10.18653/v1/2021.acl-demo.39",
-    pages = "325--336",
-    abstract = "We present Retriever-Transducer-Checker (ReTraCk), a neural semantic parsing framework for large scale knowledge base question answering (KBQA). ReTraCk is designed as a modular framework to maintain high flexibility. It includes a retriever to retrieve relevant KB items efficiently, a transducer to generate logical form with syntax correctness guarantees and a checker to improve transduction procedure. ReTraCk is ranked at top1 overall performance on the GrailQA leaderboard and obtains highly competitive performance on the typical WebQuestionsSP benchmark. Our system can interact with users timely, demonstrating the efficiency of the proposed framework.",
+## Citation
+
+If you find this paper or code useful, please cite the following paper:
+
+```
+@article{shu2022tiara,
+  title={{TIARA}: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Bases},
+  author={Shu, Yiheng and Yu, Zhiwei and Li, Yuhan and Karlsson, B{\"o}rje F and Ma, Tingting and Qu, Yuzhong and Lin, Chin-Yew},
+  journal={arXiv preprint arXiv:2210.12925},
+  year={2022}
 }
 ```
 
-For any questions/comments, please feel free to open GitHub issues.
+## Requirements
 
-## Installation
+The code is tested under the following environment:
 
+- python>=3.8.13
+- pytorch==1.11.0 (install cuda version if available): when install torch, make sure the cuda version is matched with your machine, and download the correct version
+  from [here](https://download.pytorch.org/whl/torch_stable.html) is the best option; you can also check [pytorch.org](https://pytorch.org/get-started/locally/)
+- other requirements: please see `requirements.txt`
 
-### Pre-setup
+## Datasets
 
-Before configuring the ReTraCk environment, we suggest you install Anaconda (miniconda should be enough) to create a virtual environment as described in the setup instructions below.
-If you prefer to use another virtual environment system, please adapt the instructions. Contributions to this README to use them are also welcome.
- 
-Due to the data requirements to run the KB side of things, in order to run ReTraCk also requires installing some services. 
+- [GrailQA v1.0](https://dl.orangedox.com/WyaCpL/): train 44,337 / dev 6,763 / test 13,231 from [GrailQA leaderboard](https://dki-lab.github.io/GrailQA/)
+- [WebQuestionsSP (WebQSP)](https://www.microsoft.com/en-us/download/details.aspx?id=52763): train 3,097 / test 1,638
 
-If you are using Windows, we suggest you use the [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/)
+## Setup
 
-### ReTraCk dependencies
+### 1. Setup Freebase
 
-After cloning this repo and going to the ReTraCk code folder:
+- Please follow [Freebase Setup](https://github.com/dki-lab/Freebase-Setup) to set up a Virtuoso service.
+  Note that at least 30G RAM and 53G+ disk space is needed for Freebase Virtuoso. The download may take some time. The default port of this service is `localhost:3001`.
 
-```bash
-conda create --name retrack_env python=3.6
-conda activate retrack_env
+### 2. Setup Conda Environment
+
+Please modify the following command to select the appropriate [pytorch version](https://download.pytorch.org/whl/torch_stable.html) (for your machine's CUDA version and Python
+version).
+
+```shell
+conda create --name tiara python=3.10
+conda activate tiara
 pip install -r requirements.txt
+
+# an example of installing torch, you could also use other pytorch package or another way to install as described above
+wget https://download.pytorch.org/whl/cu113/torch-1.11.0%2Bcu113-cp310-cp310-linux_x86_64.whl 
+pip install torch-1.11.0+cu113-cp310-cp310-linux_x86_64.whl
+rm torch-1.11.0+cu113-cp310-cp310-linux_x86_64.whl
 ```
 
-If PyTorch fails to install, please run the command below. Replace "cu101" with the CUDA version suited to your environment.
+**[Optional]** If you would like to reinstall this environment, remove this environment first and then run the above command.
+
+```shell
+conda deactivate
+conda env remove -n tiara
+```
+
+### 3. Setup Data and Code
+
+Our data folder is stored in TIARA_DATA (azure link). Please download and unzip the data folder before running.
+
+```shell
+wget
+unzip TIARA_DATA
+```
+
+**Note that** the following working directory is `src`.
+
+```shell
+cd src
+python prepare.py
+```
+
+### 4. (Optional) GPU Adaptation
+
+If the GPU takes up too much memory when running the following code, you may need to modify `chunk_size` in dense_retriever (for inference) or set gradient accumulation in the generator (for training) due to the difference in memory size supported by different GPUs. 
+
+## Running
+
+### 1. Entity Retrieval
+
+**GrailQA** entity retrieval: mention detection (SpanMD) + candidate generation (FACC1) + entity disambiguation (BERT ranking);
+**WebQSP** entity retrieval: [ELQ](https://github.com/facebookresearch/BLINK/tree/main/elq), results are stored in `dataset/WebQSP/entity_linking_results`.
+
+The following is an introduction to GrailQA entity retrieval.
+
+#### 1.1 Mention Detection
+
+<!---Please refer to [SpanMD](https://github.com/yhLeeee/SpanMD) for the mention detection step.*/-->
+
+To reproduce the entity linking results reported in the paper, please move the mention detection results:
+
+```shell
+mv ../dataset/GrailQA/el_files retriever/
+```
+
+The mentions detected by our SpanMD are in `src/retriever/el_files/SpanMD_dev.json` and `src/retriever/el_files/SpanMD_test.json` for dev set and test set, respectively, and you can directly go to the step 1.2.
+
+Since we still work on the mention detection step, we do not provide the code of SpanMD at this time. If you want to train your own mention detector, we recommend you to utilize the mention detector model based on [PURE](https://github.com/princeton-nlp/PURE), which can achieve even better mention detection results compared to SpanMD (88.94 F1 vs 86.07 F1). We provide the NER datasets and checkpoints in `../model/mention_detection/grailqa_data` and `../model/mention_detection/grailqa_models`, respectively. You can put these two folders under the PURE project and use the following scripts to train & inference a mention detector.
 
 ```bash
-pip install torch===1.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
-pip install -r requirements.txt
+# Run the NER model of PURE, the results will be stored in grailqa_models/checkpoint/ent_pred_test.json
+python run_entity.py \
+    --do_train --do_eval --eval_test \
+    --learning_rate=5e-6 --task_learning_rate=5e-6 \
+    --train_batch_size=32 \
+    --eval_batch_size=108 \
+    --context_window 0 \
+    --max_span_length 15 \
+    --task grailqa \
+    --data_dir grailqa_data/json/ \
+    --model bert-base-uncased \
+    --output_dir grailqa_models/checkpoint \
+    --num_epoch 10 \
+    --seed 42
+
+# Inference the NER model via checkpoints
+python run_entity.py \
+    --do_eval --eval_test \
+    --context_window 0 \
+    --task grailqa \
+    --data_dir grailqa_data/json/ \
+    --model allenai/scibert_scivocab_uncased \
+    --output_dir grailqa_models/checkpoint
 ```
 
-If your GPU doesn't support CUDA cc 3.7 or higher, you'll need to compile pytorch from source.
+#### 1.2 Candidate Generation & Entity Disambiguation
 
+If you skip this step, entity linking results are already in `../dataset/GrailQA/entity_linking_results`.
 
-### Virtuoso Open-source Setup
+- Please run the following command, it will download
+  checkpoints ([grail_bert_entity_disamb](https://storage.googleapis.com/sfr-rng-kbqa-data-research/model_release/grail_bert_entity_disamb.zip)) for entity disambiguation and put
+  them under `src/retriever/checkpoints/`
+  folder:
 
-Virtuoso is used as a SPARQL endpoint to Freebase. 
-Please follow the setup steps described in this [repo](https://github.com/dki-lab/Freebase-Setup) to install Virtuoso Open-source 7.2.* and load their Freebase dump.
-
-
-### Redis
-
-We use Redis to store the anchor relations and entity meta information associated with each Freebase entity. 
-
-Please follow the steps described in this [guideline](https://redis.io/topics/quickstart) to install the service.
-
-```bash
-wget http://download.redis.io/redis-stable.tar.gz
-tar xvzf redis-stable.tar.gz
-cd redis-stable
-make
-make install
+```shell
+sh download_disamb.sh
 ```
 
-The ```make install``` is optional`, if you don't want Redis system-available.
+- Run the following command to get the final entity linking results for GrailQA dataset:
 
-## Configuring ReTraCk
- 
-### Downloading ReTraCk resources
+```shell
+sh retriever/scripts/entity_retrieval.sh
+```
 
-#### Redis dump files
+The final entity linking results of this step can be found in `src/retriever/outputs`, and the disambiguation index can be found in `src/retriever/results/disamb`.
 
-#### Model checkpoints
+### 2. Exemplary Logical Form Retrieval
 
-#### Datasets
-We conduct the experiments on two datasets: [GrailQA](https://dl.orangedox.com/WyaCpL/) and [WebQuestionsSP] (https://www.microsoft.com/en-us/download/details.aspx?id=52763). Both datasets follow the same format of GrailQA. We appreciate Gu Yu, the author of [GrailQA](https://dki-lab.github.io/GrailQA/), who provides us with the pre-processed WebQuestionsSP.
+- Please refer to [RnG-KBQA](https://github.com/salesforce/rng-kbqa) for exemplary logical form retrieval including (iii) Enumerating Logical Form Candidates and (iv) Running
+  Ranker.
 
-### Demo Setup
+### 3. Schema Retrieval
 
-0. Define environment variables for the Virtuoso Open-source installation, data files location, and ReTraCk's directory. 
-   
-    ```bash
-    export RETRACK_HOME="{ReTraCk repo clone location}"
-    export DATA_PATH="{path to the downloaded data}"
-    export VIRTUOSO_PATH="{Virtuoso install directory}"
-    ```
+If no trained model exists in the model directory, i.e., `model/schema_dense_retriever` or `model/webqsp_schema_dense_retriever`, it will start with training and then run the
+evaluation.
 
-1. Launch endpoints for dependency services (Redis, SPARQL, NER)
-    ```bash
-    bash $RETRACK_HOME/scripts/redis.sh
-    bash $RETRACK_HOME/scripts/virtuoso.sh
-    bash $RETRACK_HOME/scripts/setup_ner.sh
-    ```
+- Schema retrieval:
 
-    If Virtuoso doesn't start, you can try:
-    
-    ```bash
-    python virtuoso.py start 3001 -d ./virtuoso_db
-    ```
+```shell
+# GrailQA class and relation
+sh grailqa_schema_retrieval.sh
 
-2. Launch ReTraCk Retriever API services
+# WebQSP relation
+sh webqsp_schema_retrieval.sh
+```
 
-    Once all dependencies are up, the retriever api can be launched via:
+### 4. Target Logical Form Generation
 
-    ```bash
-    python schema_service_api.py &
-    python retriever_api.py &
-    ```
-   Keep in mind that the first run of the system may be slow as pretrained models will be downloaded and cached locally.
+The commands for the main and ablation experiments are as follows:
 
-4. Run the demo parser of interest (e.g., GrailQA)
-   
-   ```bash
-   cd parser 
-   python demo.py --config_path ./retrack/configs/demo_grailqa.json
-   ```    
+#### 4.1 GrailQA dev
+
+```shell
+# CD denotes constrained decoding, Schema denotes schema retrieval, ELF denotes exemplary logical form retrieval
+# * denotes oracle entity annotations
+
+# GrailQA dev
+python algorithm/grailqa_generation.py --prompt lf_schema                 # TIARA
+python algorithm/grailqa_generation.py --prompt lf_schema --checker False # TIARA w/o CD
+python algorithm/grailqa_generation.py --prompt lf                        # TIARA w/o Schema
+python algorithm/grailqa_generation.py --prompt lf --checker False        # TIARA w/o Schema & CD
+python algorithm/grailqa_generation.py --prompt schema                    # TIARA w/o ELF
+python algorithm/grailqa_generation.py --prompt schema --checker False    # TIARA w/o ELF & CD
+python algorithm/grailqa_generation.py --prompt none                      # TIARA w/o ELF & schema
+python algorithm/grailqa_generation.py --prompt none --checker False      # TIARA w/o ELF & schema & CD
+python algorithm/grailqa_generation.py --prompt lf_schema --model_name t5-large
+```
+
+#### 4.2 GrailQA hidden test
+
+```shell
+# GrailQA hidden test
+python algorithm/grailqa_generation.py --prompt lf_schema --run_valid False --run_test True
+```
+
+#### 4.3 WebQSP
+
+```shell
+# WebQSP
+python algorithm/webqsp_generation.py --prompt lf_relation # TIARA
+python algorithm/webqsp_generation.py --prompt lf          # TIARA w/o Schema
+python algorithm/webqsp_generation.py --prompt relation    # TIARA w/o ELF
+python algorithm/webqsp_generation.py --prompt none        # TIARA w/o ELF & Schema
+```
+
+#### 4.4 WebQSP with oracle entity
+
+```shell
+# WebQSP with oracle entity
+python algorithm/webqsp_generation.py --golden_entity True --prompt lf_relation # TIARA*
+python algorithm/webqsp_generation.py --golden_entity True --prompt lf # TIARA* w/o Schema
+python algorithm/webqsp_generation.py --golden_entity True --prompt relation # TIARA* w/o ELF
+python algorithm/webqsp_generation.py --golden_entity True --prompt none # TIARA* w/o ELF & Schema
+```
+
+## Model Training
+
+If you want to train your models, please see this section.
+
+### 1. Train Schema Retriever
+
+If a trained model exists in the model directory, i.e., `model/schema_dense_retriever` or `model/webqsp_schema_dense_retriever`, training will be skipped.
+
+```shell
+# `neg` denotes negative sampling, `num` denotes the number of negative samples
+# `split` denotes the dataset to predict, not the dataset to train
+
+# GrailQA class
+python retriever/dense_retriever/grailqa_schema_dense_retriever.py --schema_type class --split dev --neg random_question --num 20
+# GrailQA relation
+python retriever/dense_retriever/grailqa_schema_dense_retriever.py --schema_type relation --split dev --neg random_question --num 20
+
+# WebQSP (relation)
+python retriever/dense_retriever/webqsp_schema_dense_retriever.py --neg relation_sample --num 30
+
+```
+
+### 2. Train Logical Form Generator
+
+If a trained model exists in the model directory, training will be skipped.
+
+```shell
+# GrailQA
+python algorithm/grailqa_generation.py
+
+# WebQSP
+python algorithm/webqsp_generation.py
+```
 
 ## Evaluation
 
-## Semantic Parser Guide
+### 1. Retrieval Evaluation
 
-The following guideline assumes your current working directory is `parser`. If not, please change to it with `cd parser`.
+```shell
+# Evalution for GrailQA entity retrieval
+python utils/statistics/entity_linking/grailqa_entity_statistics.py --data dev --el_path retriever/outputs/tiara_dev_el_results.json
 
-### Evaluate & Debug your Parser
+# Evaluation for GrailQA schema retrieval
+python retriever/schema_linker/grailqa_schema_evaluation.py
 
-To evaluate a trained semantic parser, you could use `evaluate.py` to calculate results and collect error cases. Note that you should specify the variable `model_file` as the model file with the suffix `.tar.gz` which is packed by AllenNLP after training.
-
-The parameters to the evaluation script are specified in a json file. We provide the configurations for GrailQA dev (as the test set is private) and WebQSP test.  
-For example, for the GrailQA dev set you should run the following command:
-```bash
-python evaluate.py --config_path=../retrack/configs/parser_eval_grailqa_dev.json
-```
-For the best possible results, please enable the complete checker (`use_beam_check`, `use_virtual_forward`, `use_type_checking`, and `use_entity_anchor`.
-
-- `fb_roles_file`, `fb_types_file` and `reverse_properties_file`: these optional files are used to calculate the official graph-based exact match on GrailQA, and you can download them from [here](https://github.com/dki-lab/GrailQA/tree/main/ontology). If these files are provided, the exact match metric represents the graph-based one, otherwise the vanilla exact match metric is used.
-
-If you are evaluating on GrailQA's validation set (i.e., there are ground-truth logic forms to compare), the reported metric will be automatically aggregated as below:
-```
-avg_exact_match: 0.80, com_exact_match: 1.00, zero_exact_match: 0.50, loss: 0.00 ||: : EXAMPLES it [TIME,  ? s/it]
 ```
 
-If you are evaluating on GrailQA's test set and preparing the submit files to GrailQA, the file with the suffix `_output.json` under the output folder will be useful, which is compatible with the official evaluation script of GrailQA.
-Notably, there will also be a file with the suffix `.md`, which can be used to track details inside the model prediction.
+### 2. QA Evaluation with Official Scripts
 
-## ReTraCk Retriever Guide
+QA prediction files are in the dir `logs`, please fill `<your_prediction_file_path>` below.
 
-To evaluate ReTraCk we provide the configs and models presented in its paper.
-Configs take the form of json files, and you can assign the target world/dataset as either "GrailQA" or "WebQSP".
+```shell
+# GrailQA evaluation for dev set
+python utils/statistics/grailqa_evaluate.py ../dataset/GrailQA/grailqa_v1.0_dev.json <your_prediction_file_path>
 
-To reproduce the schema retriever results, please edit /tests/debug/launch_schema_retriever.py to reference the dataset you want to evaluate.
-
-Once it points to the right dataset, run:
-```bash
-python ./tests/debug/launch_schema_retriever.py
+# WebQSP evaluation
+python utils/statistics/webqsp_evaluate.py ../dataset/WebQSP/WebQSP.test.json <your_prediction_file_path>
 ```
-Inference will generate Class and Relation predictions, along with merged results, and print out Recall numbers for both predictions types.
 
-### Use ReTraCkRetriever in your codebase
-
-For examples on how to use ReTraCkRetriever in your code base, please check /tests/debug/launch_schema_retriever.py and [TRAIN.MD](TRAIN.MD). 
-
-## License
-The ReTrack Demo code is MIT licensed. See the [LICENSE](LICENSE) file for details.
+For [GrailQA evaluation for hidden test set](https://worksheets.codalab.org/worksheets/0xd51b9aa5cf374ee598f1d6422cd976f3), please submit online.
