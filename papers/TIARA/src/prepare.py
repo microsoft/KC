@@ -83,8 +83,9 @@ if __name__ == '__main__':
     os.system('mv run_disamb.py retriever')
     alter('retriever/run_disamb.py', 'do_predict=args.do_predict', 'do_predict=False')
 
-    os.system('wget https://raw.githubusercontent.com/salesforce/rng-kbqa/2b6ef28e7724f11181f59589398894a1d0617455/GrailQA/scripts/run_disamb.sh')
-    os.system('mv run_disamb.sh retriever/scripts')
+    # Setting in script updates in current repo
+    # os.system('wget https://raw.githubusercontent.com/salesforce/rng-kbqa/2b6ef28e7724f11181f59589398894a1d0617455/GrailQA/scripts/run_disamb.sh')
+    # os.system('mv run_disamb.sh retriever/scripts')
 
     os.system('wget https://raw.githubusercontent.com/salesforce/rng-kbqa/2b6ef28e7724f11181f59589398894a1d0617455/framework/executor/sparql_executor.py')
     os.system('mv sparql_executor.py retriever/schema_linker')

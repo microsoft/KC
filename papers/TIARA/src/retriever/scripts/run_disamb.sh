@@ -5,6 +5,9 @@
 #SPDX-License-Identifier: BSD-3-Clause
 #For full license text, see the LICENSE file in the repo root or https://#opensource.org/licenses/BSD-3-Clause
 
+# File is the same as source in https://raw.githubusercontent.com/salesforce/rng-kbqa/2b6ef28e7724f11181f59589398894a1d0617455/GrailQA/scripts/run_disamb.sh
+# Only some settings modified.
+
 export DATA_DIR=outputs
 ACTION=${1:-none}
 dataset="grail"
