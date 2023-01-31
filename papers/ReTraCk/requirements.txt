@@ -1,6 +1,6 @@
 # Semantic Parser
 numpy==1.22.0
-torch==1.6.0
+torch==1.13.1
 allennlp==1.2.2
 allennlp_semparse
 editdistance==0.5.3
