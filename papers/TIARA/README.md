@@ -1,8 +1,10 @@
-# TIARA
+# TIARA: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Base
 
-Code for EMNLP 2022 paper: **TIARA: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Base**.
+This repository contains the open-sourced official implementation of the paper
 
-[[PDF](https://arxiv.org/abs/2210.12925)] [[poster](https://yihengshu.github.io/homepage/EMNLP22poster.pdf)] [[slides](https://yihengshu.github.io/homepage/EMNLP22slides.pdf)] [[video](https://s3.amazonaws.com/pf-user-files-01/u-59356/uploads/2022-11-04/fr03tjr/EMNLP22.mp4)]
+[TIARA: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Base](https://arxiv.org/abs/2210.12925). Published at EMLP 2022.
+
+[[poster](./docs/EMNLP22poster.pdf)] [[slides](./docs/EMNLP22slides.pdf)] [[video](https://kcpapers.blob.core.windows.net/tiara-emnlp2022/EMNLP22.mp4)]
 
 ![TIARA.png](TIARA.png)
 
@@ -13,9 +15,14 @@ If you find this paper or code useful, please cite the following paper:
 ```
 @article{shu2022tiara,
   title={{TIARA}: Multi-grained Retrieval for Robust Question Answering over Large Knowledge Bases},
-  author={Shu, Yiheng and Yu, Zhiwei and Li, Yuhan and Karlsson, B{\"o}rje F and Ma, Tingting and Qu, Yuzhong and Lin, Chin-Yew},
-  journal={arXiv preprint arXiv:2210.12925},
+  author={Shu, Yiheng and Yu, Zhiwei and Li, Yuhan and Karlsson, B{\"o}rje F. and Ma, Tingting and Qu, Yuzhong and Lin, Chin-Yew},
+  booktitle = {Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing (EMLP 20022)},
+  month = dec,
   year={2022}
+  address = "Online",
+  publisher = "Association for Computational Linguistics",
+  url = "https://arxiv.org/abs/2210.12925",
+  doi = "",
 }
 ```
 
@@ -65,11 +72,11 @@ conda env remove -n tiara
 
 ### 3. Setup Data and Code
 
-Our data folder is stored in TIARA_DATA (azure link). Please download and unzip the data folder before running.
+TIARA requires some pre-processed data. It can be downloaded from [Azure Storage](https://kcpapers.blob.core.windows.net/tiara-emnlp2022/TIARA_DATA.zip) (7.8GB). Please download it and unzip the data folder before running.
 
 ```shell
 wget
-unzip TIARA_DATA
+unzip TIARA_DATA.zip
 ```
 
 **Note that** the following working directory is `src`.
@@ -94,17 +101,15 @@ The following is an introduction to GrailQA entity retrieval.
 
 #### 1.1 Mention Detection
 
-<!---Please refer to [SpanMD](https://github.com/yhLeeee/SpanMD) for the mention detection step.*/-->
-
-To reproduce the entity linking results reported in the paper, please move the mention detection results:
+**Important notice:** To reproduce the entity linking results reported in the paper, please move the mention detection results to the correct location:
 
 ```shell
 mv ../dataset/GrailQA/el_files retriever/
 ```
 
-The mentions detected by our SpanMD are in `src/retriever/el_files/SpanMD_dev.json` and `src/retriever/el_files/SpanMD_test.json` for dev set and test set, respectively, and you can directly go to the step 1.2.
+The mentions detected by our SpanMD model should be in `src/retriever/el_files/SpanMD_dev.json` and `src/retriever/el_files/SpanMD_test.json` for dev set and test set, respectively, and you can directly go to the step 1.2.
 
-Since we still work on the mention detection step, we do not provide the code of SpanMD at this time. If you want to train your own mention detector, we recommend you to utilize the mention detector model based on [PURE](https://github.com/princeton-nlp/PURE), which can achieve even better mention detection results compared to SpanMD (88.94 F1 vs 86.07 F1). We provide the NER datasets and checkpoints in `../model/mention_detection/grailqa_data` and `../model/mention_detection/grailqa_models`, respectively. You can put these two folders under the PURE project and use the following scripts to train & inference a mention detector.
+This is necessary as the code for SpanMD is not yet open-sourced. We provide a pre-trained mention detection model for other needs. If you want to train your own mention detector, we recommend you to utilize the provided mention detector model code based on [PURE](https://github.com/princeton-nlp/PURE), which can achieve comparable mention detection results to our SpanMD (88.94 F1 vs 86.07 F1). We provide the NER datasets and checkpoints in `../model/mention_detection/grailqa_data` and `../model/mention_detection/grailqa_models`, respectively. You can put these two folders under the PURE project and use the following scripts for training & inference.
 
 ```bash
 # Run the NER model of PURE, the results will be stored in grailqa_models/checkpoint/ent_pred_test.json
@@ -138,7 +143,7 @@ If you skip this step, entity linking results are already in `../dataset/GrailQA
 
 - Please run the following command, it will download
   checkpoints ([grail_bert_entity_disamb](https://storage.googleapis.com/sfr-rng-kbqa-data-research/model_release/grail_bert_entity_disamb.zip)) for entity disambiguation and put
-  them under `src/retriever/checkpoints/`
+  them under the `src/retriever/checkpoints/`
   folder:
 
 ```shell
@@ -175,7 +180,7 @@ sh webqsp_schema_retrieval.sh
 
 ### 4. Target Logical Form Generation
 
-The commands for the main and ablation experiments are as follows:
+The commands for both main and ablation experiments are as follows:
 
 #### 4.1 GrailQA dev
 
@@ -224,7 +229,7 @@ python algorithm/webqsp_generation.py --golden_entity True --prompt none # TIARA
 
 ## Model Training
 
-If you want to train your models, please see this section.
+If you want to train your own models, please see this section.
 
 ### 1. Train Schema Retriever
 
@@ -261,7 +266,7 @@ python algorithm/webqsp_generation.py
 ### 1. Retrieval Evaluation
 
 ```shell
-# Evalution for GrailQA entity retrieval
+# Evaluation for GrailQA entity retrieval
 python utils/statistics/entity_linking/grailqa_entity_statistics.py --data dev --el_path retriever/outputs/tiara_dev_el_results.json
 
 # Evaluation for GrailQA schema retrieval
