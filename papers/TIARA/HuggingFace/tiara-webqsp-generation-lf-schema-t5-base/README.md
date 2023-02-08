@@ -11,7 +11,7 @@ This repo contains the **WebQSP target logical form generation** model of the EM
 
 ## Usage
 
-HuggingFace Transformer and Task: T5ForConditionalGeneration
+HuggingFace Transformer and Task: `T5ForConditionalGeneration`.
 
 This model and the contexts of logical form and schema is a part of [TIARA_DATA.zip](https://kcpapers.blob.core.windows.net/tiara-emnlp2022/TIARA_DATA.zip). 
 
