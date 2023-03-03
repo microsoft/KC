@@ -26,7 +26,10 @@ conda activate retrack_env
 bash retriever/entitylinking/train_ner.sh WebQSP
 ```
 2. Bootleg
-Please see retriever/entitylinking/bootleg/aml.ipynb on how to submit jobs on AML to train a Bootleg model. 
+```shell
+conda activate bootleg
+python run.py --config_script configs/grailqa_config.json --mode "train" --base_dir ${DATA_PATH}/KBSchema/EntityLinking/Bootleg/GrailQA/ --experiment_name "grailqa_model" --tensorboard_dir ${DATA_PATH}/KBSchema/EntityLinking/Bootleg/GrailQA/log
+```
 
 #### Evaluation
 

@@ -6,7 +6,7 @@ import time
 
 from SPARQLWrapper import SPARQLWrapper, JSON, SPARQLExceptions
 
-sparql = SPARQLWrapper("http://localhost:8890/sparql/")
+sparql = SPARQLWrapper("http://localhost:3001/sparql/")
 prefix = "http://rdf.freebase.com/ns/"
 
 

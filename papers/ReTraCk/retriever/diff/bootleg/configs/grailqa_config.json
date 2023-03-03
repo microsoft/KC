@@ -107,7 +107,7 @@
         "train_in_candidates": true,
         "max_word_token_len": 100,
         "word_embedding": {
-            "cache_dir": "pretrained_bert_models",
+            "cache_dir": "../pretrained_bert_models",
             "layers": 12,
             "load_class": "bert_word_emb.BERTWordEmbedding",
             "sent_class": "bert_sent_emb.BERTSentEmbedding",

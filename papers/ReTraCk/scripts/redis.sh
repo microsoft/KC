@@ -3,7 +3,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
-echo "Starting NER service..."
+echo "Starting Redis service..."
 if ( command -v nc &> /dev/null ) && ( nc -zv localhost 6386 2>&1 >/dev/null ); then
     echo "Redis meta online"
 else

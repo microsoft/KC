@@ -8,7 +8,6 @@ from allennlp.commands import main
 import json
 import argparse
 from typing import Dict
-from repack_aml_model import modify_config_and_pack, unzip_cat_file
 from retriever.configs import config_utils
 
 
@@ -93,13 +92,25 @@ if __name__ == '__main__':
         "--reverse_properties_file", reverse_properties_file,
         "--semantic_constrained_file", semantic_constraints_file,
         "--literal_relation_file", literal_relations_file,
-        "--use_beam_check", use_beam_check,
-        "--use_virtual_forward", use_virtual_forward,
-        "--use_type_checking", use_type_checking,
-        "--use_entity_anchor", use_entity_anchor,
-        "--evaluate_f1", eval_f1,
-        "--evaluate_hits1", eval_hits1,
     ]
+
+    if use_beam_check == "True":
+        args += ["--use_beam_check", use_beam_check]
+
+    if use_virtual_forward == "True":
+        args += ["--use_virtual_forward", use_virtual_forward]
+
+    if use_type_checking == "True":
+        args += ["--use_type_checking", use_type_checking]
+
+    if use_entity_anchor == "True":
+        args += ["--use_entity_anchor", use_entity_anchor]
+
+    if eval_f1 == "True":
+        args += ["--evaluate_f1", eval_f1]
+
+    if eval_hits1 == "True":
+        args += ["--evaluate_hits1", eval_hits1]
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--evaluate_file", type=str, default=r"./Dataset/GrailQA/processed/dev.json")

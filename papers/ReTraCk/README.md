@@ -101,6 +101,7 @@ We conduct experiments over two datasets: [GrailQA](https://dl.orangedox.com/Wya
     export RETRACK_HOME="{ReTraCk repo clone location}"
     export DATA_PATH="{path to the downloaded data}"
     export VIRTUOSO_PATH="{Virtuoso install directory}"
+    export PYTHONPATH=.
     ```
 
 1. Setup dependencies and launch endpoints for relevant services (Redis, SPARQL, NER)
@@ -130,8 +131,8 @@ We conduct experiments over two datasets: [GrailQA](https://dl.orangedox.com/Wya
 4. Run the demo parser of interest (e.g., GrailQA)
    
    ```bash
-   cd parser 
-   python demo.py --config_path ./retrack/configs/demo_grailqa.json
+   # cd parser 
+   python parser/demo.py --config_path ./retrack/configs/demo_grailqa.json
    ```    
 
 ## Evaluation
@@ -213,14 +214,29 @@ If you want to train your own dense retriever, please use dataset/scripts/pack_t
 
 If you use PyCharm, please firstly set `parser` as Sources Root. And then directly train a model via running `train.py`. Or you can run with the following command:
 
+#### Train with multiple GPUs
+
+1. Generate sharded datasets for multiple GPUs
 ```bash
-python train.py --serialization_dir <serialization_dir> --train_data_path <train_data_path> --validation_data_path <validation_data_path>
+python $RETRACK_HOME/scripts/zip_multi_gpu_file.py --in-dir ${DATA_PATH}/Dataset/GrailQA/processed --out-dir ${DATA_PATH}/Dataset/GrailQA/zip/ --batch_size_per_card 3 --gpu_num 4
+```
+
+2. Distributed training with multiple GPUs
+```bash
+python train_distributed.py --serialization_dir <serialization_dir> --train_data_path ${DATA_PATH}/Dataset/GrailQA/zip/train.zip --validation_data_path ${DATA_PATH}/Dataset/GrailQA/zip/dev.zip --fb_roles_file ${DATA_PATH}/Parser/graph_match/fb_roles.txt --fb_types_file ${DATA_PATH}/Parser/graph_match/fb_types.txt --reverse_properties_file ${DATA_PATH}/Parser/graph_match/reverse_properties.txt --literal_relation_file ${DATA_PATH}/Parser/constraint/Literal_Relation.pkl
+```
+
+#### Train with single GPU
+
+```bash
+python train.py --serialization_dir <serialization_dir> --train_data_path ${DATA_PATH}/Dataset/GrailQA/processed/train.json --validation_data_path ${DATA_PATH}/Dataset/GrailQA/processed/dev.json  --fb_roles_file ${DATA_PATH}/Parser/graph_match/fb_roles.txt --fb_types_file ${DATA_PATH}/Parser/graph_match/fb_types.txt --reverse_properties_file ${DATA_PATH}/Parser/graph_match/reverse_properties.txt --literal_relation_file ${DATA_PATH}/Parser/constraint/Literal_Relation.pkl
 ```
 
 - `serialization_dir`: the folder where your trained parser will store in
 - `train_data_path`: the training data path for semantic parser
 - `validation_data_path`: the validation data path for semantic parser
 
+Note: during training, we only use the instance-level checking for fast validation. Therefore, you need to re-evaluate the model with full checking mechanisms for final results.
 
 ## License
 The ReTrack Demo code is MIT licensed. See the [LICENSE](LICENSE) file for details.

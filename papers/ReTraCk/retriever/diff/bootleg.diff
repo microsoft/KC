@@ -1,3 +1,127 @@
+diff --git bootleg/annotator.py bootleg/annotator.py
+index 3ece2f7..58988bd 100644
+--- bootleg/annotator.py
++++ bootleg/annotator.py
+@@ -21,13 +21,14 @@ class Annotator():
+     Annotator class: convenient wrapper of preprocessing and model eval to allow for
+     annotating single sentences at a time for quick experimentation, e.g. in notebooks.
+     """
++
+     def __init__(self, config_args, device='cuda', max_alias_len=6,
+-        cand_map=None, threshold=0.0):
++                 cand_map=None, threshold=0.0):
+         self.args = config_args
+         self.device = device
+         self.entity_db = EntitySymbols(os.path.join(self.args.data_config.entity_dir,
+-                                                     self.args.data_config.entity_map_dir),
+-                                        alias_cand_map_file=self.args.data_config.alias_cand_map)
++                                                    self.args.data_config.entity_map_dir),
++                                       alias_cand_map_file=self.args.data_config.alias_cand_map)
+         self.word_db = data_utils.load_wordsymbols(self.args.data_config, is_writer=True, distributed=False)
+         self.model = self._load_model()
+         self.max_alias_len = max_alias_len
+@@ -51,7 +52,9 @@ class Annotator():
+                 mod, load_class = import_class("bootleg.embeddings", emb.load_class)
+                 try:
+                     self.batch_on_the_fly_embs[emb.key] = getattr(mod, load_class)(main_args=self.args,
+-                        emb_args=emb['args'], entity_symbols=self.entity_db, model_device=None, word_symbols=None)
++                                                                                   emb_args=emb['args'],
++                                                                                   entity_symbols=self.entity_db,
++                                                                                   model_device=None, word_symbols=None)
+                 except AttributeError as e:
+                     print(f'No prep method found for {emb.load_class} with error {e}')
+                 except Exception as e:
+@@ -59,9 +62,9 @@ class Annotator():
+ 
+     def _load_model(self):
+         model_state_dict = torch.load(self.args.run_config.init_checkpoint,
+-            map_location=lambda storage, loc: storage)['model']
++                                      map_location=lambda storage, loc: storage)['model']
+         model = Model(args=self.args, model_device=self.device,
+-            entity_symbols=self.entity_db, word_symbols=self.word_db).to(self.device)
++                      entity_symbols=self.entity_db, word_symbols=self.word_db).to(self.device)
+         # remove distributed naming if it exists
+         if not self.args.run_config.distributed:
+             new_state_dict = OrderedDict()
+@@ -81,12 +84,12 @@ class Annotator():
+ 
+     def extract_mentions(self, text):
+         found_aliases, found_spans = find_aliases_in_sentence_tag(text,
+-            self.all_aliases_trie, self.max_alias_len)
++                                                                  self.all_aliases_trie, self.max_alias_len)
+         return {'sentence': text,
+                 'aliases': found_aliases,
+                 'spans': found_spans,
+                 # we don't know the true QID
+-                'qids': ['Q-1'for i in range(len(found_aliases))],
++                'qids': ['Q-1' for i in range(len(found_aliases))],
+                 'gold': [True for i in range(len(found_aliases))]}
+ 
+     def set_threshold(self, value):
+@@ -94,7 +97,8 @@ class Annotator():
+ 
+     def label_mentions(self, text):
+         sample = self.extract_mentions(text)
+-        idxs_arr, aliases_to_predict_per_split, spans_arr, phrase_tokens_arr = sentence_utils.split_sentence(
++        char_spans = self.get_char_spans(sample['spans'], text)
++        idxs_arr, aliases_to_predict_per_split, spans_arr, phrase_tokens_arr, pos_idxs = sentence_utils.split_sentence(
+             max_aliases=self.args.data_config.max_aliases,
+             phrase=sample['sentence'],
+             spans=sample['spans'],
+@@ -107,7 +111,7 @@ class Annotator():
+         word_indices_arr = [self.word_db.convert_tokens_to_ids(pt) for pt in phrase_tokens_arr]
+ 
+         if len(idxs_arr) > 1:
+-            #TODO: support sentences that overflow due to long sequence length or too many mentions
++            # TODO: support sentences that overflow due to long sequence length or too many mentions
+             raise ValueError('Overflowing sentences not currently supported in Annotator')
+ 
+         # iterate over each sample in the split
+@@ -142,15 +146,14 @@ class Annotator():
+                 batch_on_the_fly_data[emb_name] = torch.tensor(emb.batch_prep(example_aliases,
+                                                                               entity_indices), device=self.device)
+ 
+-
+             outs, entity_pack, _ = self.model(
+-                alias_idx_pair_sent = [torch.tensor(example_aliases_locs_start, device=self.device).unsqueeze(0),
+-                                       torch.tensor(example_aliases_locs_end, device=self.device).unsqueeze(0)],
+-                word_indices = torch.tensor([word_indices], device=self.device),
+-                alias_indices = torch.tensor(example_aliases, device=self.device).unsqueeze(0),
+-                entity_indices = torch.tensor(entity_indices, device=self.device).unsqueeze(0),
+-                batch_prepped_data = {},
+-                batch_on_the_fly_data = batch_on_the_fly_data)
++                alias_idx_pair_sent=[torch.tensor(example_aliases_locs_start, device=self.device).unsqueeze(0),
++                                     torch.tensor(example_aliases_locs_end, device=self.device).unsqueeze(0)],
++                word_indices=torch.tensor([word_indices], device=self.device),
++                alias_indices=torch.tensor(example_aliases, device=self.device).unsqueeze(0),
++                entity_indices=torch.tensor(entity_indices, device=self.device).unsqueeze(0),
++                batch_prepped_data={},
++                batch_on_the_fly_data=batch_on_the_fly_data)
+ 
+             entity_cands = eval_utils.map_aliases_to_candidates(self.args.data_config.train_in_candidates,
+                                                                 self.entity_db,
+@@ -172,4 +175,19 @@ class Annotator():
+                     pred_probs.append(pred_prob)
+                     titles.append(self.entity_db.get_title(pred_qid) if pred_qid != 'NC' else 'NC')
+ 
+-            return pred_cands, pred_probs, titles
+\ No newline at end of file
++            return pred_cands, pred_probs, titles, char_spans
++
++    def get_char_spans(self, spans, text):
++        query_toks = text.split()
++        char_spans = []
++        for span in spans:
++            space_btwn_toks = len(' '.join(query_toks[0:span[0] + 1])) - \
++                              len(' '.join(query_toks[0:span[0]])) - \
++                              len(
++                query_toks[span[0]])
++            char_b = len(' '.join(query_toks[0:span[0]])) + space_btwn_toks
++            char_e = char_b + len(' '.join(query_toks[span[0]:span[1]]))
++            # print(char_b, char_e, space_btwn_toks)
++            # print(f"'{query[0][char_b:char_e]}'")
++            char_spans.append([char_b, char_e])
++        return char_spans
 diff --git bootleg/config.py bootleg/config.py
 index fdd8e4e..ef67abf 100644
 --- bootleg/config.py
@@ -14,10 +138,18 @@ index fdd8e4e..ef67abf 100644
      "data_config": {
          "train_in_candidates": (True, "Train in candidates (if False, this means we include NIL entity)"),
 diff --git bootleg/dataloaders/wiki_dataset.py bootleg/dataloaders/wiki_dataset.py
-index b3bcc46..2753bee 100644
+index f7ffe21..2753bee 100644
 --- bootleg/dataloaders/wiki_dataset.py
 +++ bootleg/dataloaders/wiki_dataset.py
-@@ -165,7 +165,7 @@ class WikiDataset(Dataset):
+@@ -94,6 +94,7 @@ class WikiDataset(Dataset):
+             # Only prep data once per node
+             if is_writer:
+                 prep_data(args, use_weak_label=use_weak_label, dataset_is_eval=self.dataset_is_eval,
++                logger=self.logger,
+                 input_src=input_src, dataset_name=dataset_name,
+                 prep_dir=data_utils.get_data_prep_dir(args))
+             if distributed:
+@@ -164,7 +165,7 @@ class WikiDataset(Dataset):
      def __getitem__(self, key):
          # start = time.time()
          example = self.data[key]
@@ -26,7 +158,7 @@ index b3bcc46..2753bee 100644
          # True entities will be true and false golds for train (if use_weak_label in config is true) and just true golds for eval
          true_entities = torch.from_numpy(example['true_entity_idx'])
          M = true_entities.shape
-@@ -183,6 +183,7 @@ class WikiDataset(Dataset):
+@@ -182,6 +183,7 @@ class WikiDataset(Dataset):
              one_hot_true_entities[keep_mask.unsqueeze(-1).expand_as(one_hot_true_entities)] = 0
              one_hot_true_entities[padded_entities.unsqueeze(-1).expand_as(one_hot_true_entities)] = 0
              entity_indices = entity_indices.masked_fill(one_hot_true_entities, -1)
@@ -34,7 +166,7 @@ index b3bcc46..2753bee 100644
              # set new true label to 0 ('not in candidate')
              true_entities = true_entities.masked_fill(~keep_mask, 0)
              # make sure original padded entities are padded
-@@ -197,6 +198,7 @@ class WikiDataset(Dataset):
+@@ -196,6 +198,7 @@ class WikiDataset(Dataset):
                          'sent_idx': example['sent_idx'],
                          'subsent_idx': example['subsent_idx'],
                          'entity_indices': entity_indices,
@@ -42,6 +174,21 @@ index b3bcc46..2753bee 100644
                          # due to subsentence split, we need to keep track of the original alias position in the list
                          # to do eval over slices when distributed
                          # (examples from a sentence may be distributed across different GPUs)
+diff --git bootleg/dataloaders/wiki_slices.py bootleg/dataloaders/wiki_slices.py
+index 34fcc39..c8a70ef 100644
+--- bootleg/dataloaders/wiki_slices.py
++++ bootleg/dataloaders/wiki_slices.py
+@@ -40,7 +40,9 @@ class WikiSlices(Dataset):
+                 self.storage_type  = prep_slice(args=args, file=os.path.basename(input_src),
+                     use_weak_label=use_weak_label, dataset_is_eval=dataset_is_eval,
+                     dataset_name=self.dataset_name,
+-                    sent_idx_file=self.sent_idx_to_idx_file, storage_config=self.config_dataset_name,
++                    sent_idx_file=self.sent_idx_to_idx_file,
++                    storage_config=self.config_dataset_name,
++                    logger=self.logger
+                     )
+                 np.save(self.config_dataset_name, self.storage_type, allow_pickle=True)
+             if distributed:
 diff --git bootleg/embeddings/entity_embs.py bootleg/embeddings/entity_embs.py
 index f448093..d67a4d9 100644
 --- bootleg/embeddings/entity_embs.py
@@ -64,12 +211,85 @@ index f448093..d67a4d9 100644
              self.logger.debug(f"Saving init vector to {vec_save_file}")
              np.save(vec_save_file, init_vec)
          else:
+diff --git bootleg/embeddings/word_embeddings/bert_sent_emb.py bootleg/embeddings/word_embeddings/bert_sent_emb.py
+index cafbd74..0495876 100644
+--- bootleg/embeddings/word_embeddings/bert_sent_emb.py
++++ bootleg/embeddings/word_embeddings/bert_sent_emb.py
+@@ -4,8 +4,6 @@ import os
+ 
+ import torch
+ from bootleg.embeddings.word_embeddings import BaseSentEmbedding
+-from bootleg.layers.layers import MLP
+-from bootleg.utils import model_utils
+ from bootleg.utils.classes.dotted_dict import DottedDict
+ 
+ 
+@@ -15,6 +13,7 @@ class BERTSentEmbedding(BaseSentEmbedding):
+     """
+     def __init__(self, emb_args, main_args, word_emb_dim, word_symbols):
+         super(BERTSentEmbedding, self).__init__(emb_args, main_args, word_emb_dim, word_symbols)
++        cache_dir = emb_args.cache_dir
+         # TO LOAD AND SAVE BERT
+         # import torch
+         # import os
+@@ -29,7 +28,6 @@ class BERTSentEmbedding(BaseSentEmbedding):
+         # If both are frozen, we can use torch.no_grad in the forward pass to save memory
+         self.requires_grad = not emb_args.freeze_sent_emb or not emb_args.freeze_word_emb
+         self.num_layers = emb_args.layers
+-        cache_dir = emb_args.cache_dir
+         if emb_args.use_lower_case:
+             self.encoder = torch.load(os.path.join(cache_dir, "bert_base_uncased_encoder.pt"))
+         else:
 diff --git bootleg/extract_mentions.py bootleg/extract_mentions.py
-index 945246d..7a17592 100644
+index 945246d..b670497 100644
 --- bootleg/extract_mentions.py
 +++ bootleg/extract_mentions.py
-@@ -71,8 +71,6 @@ def get_all_aliases(alias2qidcands, logger):
+@@ -69,10 +69,50 @@ def get_all_aliases(alias2qidcands, logger):
+     all_aliases = marisa_trie.Trie(alias2qids.keys())
+     return all_aliases
  
++# TODO: simplify -- remove extra filters
++# def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
++#     PUNC = string.punctuation
++#     table = str.maketrans(dict.fromkeys(PUNC))  # OR {key: None for key in string.punctuation}
++#     used_aliases = []
++#     sentence_split_raw = sentence.split()
++#     # find largest aliases first
++#     for n in range(max_alias_len+1, 0, -1):
++#         grams = nltk.ngrams(sentence_split_raw, n)
++#         j_st = -1
++#         j_end = n-1
++#         for gram_words in grams:
++#             j_st += 1
++#             j_end += 1
++#             # We don't want punctuation words to be used at the beginning/end
++#             if len(gram_words[0].translate(table).strip()) == 0 or len(gram_words[-1].translate(table).strip()) == 0:
++#                 continue
++#             gram_attempt = get_lnrm(" ".join(gram_words))
++#             # TODO: remove possessives from alias table
++#             if len(gram_attempt) > 1:
++#                 if gram_attempt[-1] == 's' and gram_attempt[-2] == ' ':
++#                     continue
++#             if gram_attempt in all_aliases:
++#                 keep = True
++#                 # We start from the largest n-grams and go down in size. This prevents us from adding an alias that is a subset of another.
++#                 # For example: "Tell me about the mother on how I met you mother" will find "the mother" as alias and "mother". We want to
++#                 # only take "the mother" and not "mother" as it's likely more descriptive of the real entity.
++#                 for u_al in used_aliases:
++#                     u_j_st = u_al[1]
++#                     u_j_end = u_al[2]
++#                     if j_st < u_j_end and j_end > u_j_st:
++#                         keep = False
++#                         break
++#                 if not keep:
++#                     continue
++#                 used_aliases.append(tuple([gram_attempt, j_st, j_end]))
++#     # sort based on span order
++#     aliases_for_sorting = sorted(used_aliases, key=lambda elem: [elem[1], elem[2]])
++#     used_aliases = [a[0] for a in aliases_for_sorting]
++#     spans = [[a[1], a[2]] for a in aliases_for_sorting]
++#     return used_aliases, spans
++
  # TODO: simplify -- remove extra filters
  def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
 -    PUNC = string.punctuation
@@ -77,7 +297,7 @@ index 945246d..7a17592 100644
      used_aliases = []
      sentence_split_raw = sentence.split()
      # find largest aliases first
-@@ -83,14 +81,7 @@ def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
+@@ -83,14 +123,7 @@ def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
          for gram_words in grams:
              j_st += 1
              j_end += 1
@@ -93,7 +313,7 @@ index 945246d..7a17592 100644
              if gram_attempt in all_aliases:
                  keep = True
                  # We start from the largest n-grams and go down in size. This prevents us from adding an alias that is a subset of another.
-@@ -111,6 +102,7 @@ def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
+@@ -111,6 +144,7 @@ def find_aliases_in_sentence_tag(sentence, all_aliases, max_alias_len = 5):
      spans = [[a[1], a[2]] for a in aliases_for_sorting]
      return used_aliases, spans
  
@@ -101,7 +321,7 @@ index 945246d..7a17592 100644
  def get_num_lines(input_src):
      # get number of lines
      num_lines = 0
-@@ -168,7 +160,7 @@ def merge_files(chunk_outfiles, out_filepath):
+@@ -168,7 +202,7 @@ def merge_files(chunk_outfiles, out_filepath):
                      sent_idx_unq += 1
  
  def extract_mentions(in_filepath, out_filepath, cand_map_file, max_alias_len=6, num_workers=8,
@@ -110,7 +330,7 @@ index 945246d..7a17592 100644
      candidate_map = ujson.load(open(cand_map_file))
      all_aliases_trie = get_all_aliases(candidate_map, logger=logger)
      start_time = time.time()
-@@ -196,7 +188,7 @@ def extract_mentions(in_filepath, out_filepath, cand_map_file, max_alias_len=6,
+@@ -196,7 +230,7 @@ def extract_mentions(in_filepath, out_filepath, cand_map_file, max_alias_len=6,
          subprocess_args = [{'in_file': chunk_infiles[i],
                              'out_file': chunk_outfiles[i],
                              'max_alias_len': max_alias_len}
@@ -119,8 +339,65 @@ index 945246d..7a17592 100644
          pool.map(subprocess, subprocess_args)
          pool.close()
          pool.join()
+@@ -234,4 +268,4 @@ def main():
+     extract_mentions(in_file, out_file, cand_map_file=args.cand_map, max_alias_len=args.max_alias_len, num_workers=args.num_workers, logger=logging.getLogger())
+ 
+ if __name__ == '__main__':
+-    main()
++    main()
+\ No newline at end of file
+diff --git bootleg/layers/slice_heads.py bootleg/layers/slice_heads.py
+index 7290d3a..cadd59b 100644
+--- bootleg/layers/slice_heads.py
++++ bootleg/layers/slice_heads.py
+@@ -19,7 +19,7 @@ class NoSliceHeads(nn.Module):
+         self.prediction_head = MLP(self.hidden_size,
+                 self.hidden_size, 1, 1, self.dropout)
+ 
+-    def forward(self, context_matrix_dict, entity_pack, sent_emb, alias_idx_pair_sent, batch_prepped, raw_entity_emb):
++    def forward(self, context_matrix_dict, alias_idx_pair_sent, entity_pack, sent_emb):
+         out = {DISAMBIG: {}}
+         score = model_utils.max_score_context_matrix(context_matrix_dict, self.prediction_head)
+         out[DISAMBIG][FINAL_LOSS] = score
+@@ -33,7 +33,7 @@ class SliceHeadsSBL(nn.Module):
+     Slice heads class (modified from https://github.com/snorkel-team/snorkel/tree/master/snorkel/slicing).
+ 
+     Implements slice-based learning module which acts as a cheap mixture of experts (https://arxiv.org/abs/1909.06349). Each user defined slice
+-    gets its own extra representation for specialize on a slice. There is also a base slice that is all examples. The representations from
++    gets its own extra representation for specialize on a slice. There is also a base slice that is all examples. The representaitons from
+     each head are merged and sent through MLP to be scored for final loss.
+ 
+     Attributes:
+@@ -91,7 +91,7 @@ class SliceHeadsSBL(nn.Module):
+         # Final prediction layer
+         self.final_pred_head = nn.Linear(self.hidden_size, 1)
+ 
+-    def forward(self, context_matrix_dict, alias_idx_pair_sent, entity_pack, sent_emb, batch_prepped, raw_entity_emb):
++    def forward(self, context_matrix_dict, alias_idx_pair_sent, entity_pack, sent_emb):
+         out = {DISAMBIG: {}, INDICATOR: {}}
+         indicator_outputs = {}
+         expert_slice_repr = {}
+@@ -116,9 +116,8 @@ class SliceHeadsSBL(nn.Module):
+                 expert_slice_repr[slice_head]).squeeze(-1)
+             # Get an alias_matrix output (batch x M x H)
+             # TODO: remove extra inputs
+-            alias_matrix, alias_word_weights = self.ind_alias_mha[slice_head](sent_embedding=sent_emb,
+-                alias_idx_pair_sent=alias_idx_pair_sent, entity_embedding=context_matrix,
+-                entity_mask=entity_pack.mask, raw_entity_embedding=raw_entity_emb, indicator_prediction=None,
++            alias_matrix, alias_word_weights = self.ind_alias_mha[slice_head](sent_embedding=sent_emb, entity_embedding=context_matrix,
++                entity_mask=entity_pack.mask, alias_idx_pair_sent=alias_idx_pair_sent,
+                 slice_emb_alias=self.slice_emb_ind_alias(torch.tensor(i, device=context_matrix.device)),
+                 slice_emb_ent=self.slice_emb_ind_ent(torch.tensor(i, device=context_matrix.device)))
+             # Get indicator head outputs; size batch x M x 2 per head
+@@ -181,4 +180,4 @@ class SliceHeadsSBL(nn.Module):
+             out[DISAMBIG][FINAL_LOSS] = out[DISAMBIG][train_utils.get_slice_head_pred_name(BASE_SLICE)]
+         else:
+             out[DISAMBIG][FINAL_LOSS] = self.final_pred_head(reweighted_rep).squeeze(-1)
+-        return out, reweighted_rep
++        return out, reweighted_rep
+\ No newline at end of file
 diff --git bootleg/model.py bootleg/model.py
-index 65cd5ee..9137c59 100644
+index f53840d..9137c59 100644
 --- bootleg/model.py
 +++ bootleg/model.py
 @@ -33,6 +33,14 @@ class Model(nn.Module):
@@ -152,8 +429,13 @@ index 65cd5ee..9137c59 100644
          # mask out padded candidates
          mask = entity_indices == -1
          entity_indices = torch.where(entity_indices >= 0, entity_indices,
-@@ -77,6 +89,8 @@ class Model(nn.Module):
-             entity_pack=entity_package, sent_emb=sent_emb)
+@@ -74,10 +86,11 @@ class Model(nn.Module):
+             alias_idx_pair_sent=alias_idx_pair_sent, entity_embedding=entity_embs, entity_mask=mask)
+         context_matrix_dict, backbone_out = self.attn_network(alias_idx_pair_sent, sent_emb, entity_embs, batch_prepped_data, batch_on_the_fly_data)
+         res, final_entity_embs = self.slice_heads(context_matrix_dict, alias_idx_pair_sent=alias_idx_pair_sent,
+-            entity_pack=entity_package, sent_emb=sent_emb, batch_prepped=batch_prepped_data,
+-            raw_entity_emb=entity_embs)
++            entity_pack=entity_package, sent_emb=sent_emb)
          # update output dictionary with backbone out
          res[DISAMBIG].update(backbone_out[DISAMBIG])
 +        if self.use_prior:
@@ -162,13 +444,82 @@ index 65cd5ee..9137c59 100644
              res[TYPEPRED] = {train_utils.get_type_head_name(): batch_type_pred}
          return res, entity_package, final_entity_embs
 diff --git bootleg/prep.py bootleg/prep.py
-index a38be07..f3c6584 100644
+index 4ee06c5..f3c6584 100644
 --- bootleg/prep.py
 +++ bootleg/prep.py
-@@ -142,9 +142,10 @@ def generate_data_subsent_helper(input_args):
+@@ -10,6 +10,7 @@ import logging
+ import jsonlines
+ import pickle
+ from collections import defaultdict
++import warnings
+ 
+ from bootleg.symbols.alias_entity_table import AliasEntityTable
+ from bootleg.symbols.entity_symbols import EntitySymbols
+@@ -22,12 +23,7 @@ from bootleg.utils.data_utils import generate_save_data_name, load_wordsymbols,
+ from bootleg.utils.parser_utils import get_full_config
+ from bootleg.utils.utils import import_class
+ 
+-"""
+-This file preps all data, slices, and embeddings needed to train a disambiguation model.
+-We additionally batch prep embeddings per data sample if the 'batch_prep' flag is used in the embedding (prep is called fist)
+-(e.g. which candidates in this sentence share a relation with the other candidates in the sentence).
+-Memory mapped files are used for the main data and batch_prepped_embedding_data.
+-"""
++warnings.filterwarnings("ignore", message="Could not import the lzma module. Your installed Python is incomplete. Attempting to use lzma compression will result in a RuntimeError.")
+ 
+ #===========================================#
+ # Helpers functions for multiprocessing (_helper)
+@@ -42,7 +38,7 @@ def get_entities(args):
+     num_aliases_with_pad = len(entity_symbols.get_all_aliases()) + 1
+     return entity_symbols, num_cands_K, num_aliases_with_pad
+ 
+-def prep_all_embs(args):
++def prep_all_embs(args, logger):
+     entity_symbols = EntitySymbols(load_dir=os.path.join(args.data_config.entity_dir, args.data_config.entity_map_dir),
+         alias_cand_map_file=args.data_config.alias_cand_map)
+     word_symbols = load_wordsymbols(args.data_config)
+@@ -50,12 +46,12 @@ def prep_all_embs(args):
+         mod, load_class = import_class("bootleg.embeddings", emb.load_class)
+         try:
+             getattr(mod, load_class).prep(main_args=args, emb_args=emb['args'],
+-                entity_symbols=entity_symbols, word_symbols=word_symbols, log_func=logging.debug)
++                entity_symbols=entity_symbols, word_symbols=word_symbols, log_func=logger.debug)
+         except AttributeError:
+-            logging.debug(f'No prep method found for {emb.load_class}')
++            logger.debug(f'No prep method found for {emb.load_class}')
+ 
+-def chunk_text_data(args, input_src, chunk_prep_dir):
+-    logging.debug(f"Reading in {input_src}")
++def chunk_text_data(args, input_src, chunk_prep_dir, logger):
++    logger.debug(f"Reading in {input_src}")
+     start = time.time()
+     # get number of lines
+     num_lines = 0
+@@ -64,8 +60,8 @@ def chunk_text_data(args, input_src, chunk_prep_dir):
+             for line in in_file:
+                 num_lines += 1
+         except Exception as e:
+-            logging.error("ERROR READING IN TRAINING DATA")
+-            logging.error(e)
++            logger.error("ERROR READING IN TRAINING DATA")
++            logger.error(e)
+             return []
+ 
+     # compute number of chunks
+@@ -105,7 +101,7 @@ def chunk_text_data(args, input_src, chunk_prep_dir):
+     out_file.close()
+     metadata = {'chunks': chunk_list, 'chunksize': chunk_size}
+     utils.dump_json_file(os.path.join(chunk_prep_dir, 'metadata.json'), metadata)
+-    logging.debug(f'Wrote out data chunks in {round(time.time() - start, 2)}s')
++    logger.debug(f'Wrote out data chunks in {round(time.time() - start, 2)}s')
+ 
+ def generate_data_subsent_helper(input_args):
+     args = input_args['args']
+@@ -145,9 +141,11 @@ def generate_data_subsent_helper(input_args):
+                 assert len(aliases) == len(anchor)
                  assert all(isinstance(a, bool) for a in anchor)
                  all_false_anchors = all([a is False for a in anchor])
- 
++
 +            # todo: check correctness for removing alias in alias_map strong assumption
              # checks that filtering was done correctly
 -            for alias in aliases:
@@ -178,7 +529,33 @@ index a38be07..f3c6584 100644
              for span in spans:
                  assert len(span) == 2,  f"Span should be len 2. Your span {span} is {len(span)}"
              if not use_weak_label:
-@@ -232,7 +233,7 @@ def process_data_subsent_helper(input_args):
+@@ -159,7 +157,7 @@ def generate_data_subsent_helper(input_args):
+             # Happens if use weak labels is False
+             if len(aliases) == 0:
+                 dropped_lines += 1
+-                # logging.warning(f'Dropping sentence. There are no aliases to predict for {line}.')
++                # logger.warning(f'Dropping sentence. There are no aliases to predict for {line}.')
+                 continue
+             # Extract the subphrase in the sentence
+             # idxs_arr is list of lists of indexes of qids, aliases, spans that are part of each subphrase
+@@ -172,7 +170,7 @@ def generate_data_subsent_helper(input_args):
+             # aliases_to_predict_per_split = [0,1,2,3,4,5,6,7] and [3,4,5,6,7,8,9]
+             # These are indexes into the idx_arr (the first aliases to be scored in the second list is idx = 3, representing the 8th aliases in
+             # the original sequence.
+-            idxs_arr, aliases_to_predict_per_split, spans_arr, phrase_tokens_arr = sentence_utils.split_sentence(max_aliases=data_args.max_aliases,
++            idxs_arr, aliases_to_predict_per_split, spans_arr, phrase_tokens_arr, phrase_tokens_pos_arr = sentence_utils.split_sentence(max_aliases=data_args.max_aliases,
+                                                                                                               phrase=phrase, spans=spans,
+                                                                                                               aliases=aliases,
+                                                                                                               aliases_seen_by_model=aliases_seen_by_model,
+@@ -211,6 +209,7 @@ def generate_data_subsent_helper(input_args):
+ def process_data_subsent_helper(input_args):
+     args = input_args['args']
+     dataset_is_eval = input_args['dataset_is_eval']
++    is_bert = input_args['is_bert']
+     data_args = args.data_config
+     in_file = input_args['in_file']
+     mmap_file_name = input_args['out_file']
+@@ -234,7 +233,7 @@ def process_data_subsent_helper(input_args):
              aliases = line['aliases']
              qids = line['qids']
              alias_list_pos = line['alias_list_pos']
@@ -187,7 +564,11 @@ index a38be07..f3c6584 100644
              assert len(aliases) <= data_args.max_aliases, f'Each example should have no more that {data_args.max_aliases} max aliases. {json.dumps(line)} does.'
              example_aliases = np.ones(data_args.max_aliases) * PAD_ID
              example_aliases_locs_start = np.ones(data_args.max_aliases) * PAD_ID
-@@ -249,7 +250,8 @@ def process_data_subsent_helper(input_args):
+@@ -247,10 +246,12 @@ def process_data_subsent_helper(input_args):
+             # used to keep track of original alias index in the list
+             for idx, (alias, span_idx, qid, alias_pos) in enumerate(zip(aliases, spans, qids, alias_list_pos)):
+                 span_start_idx,  span_end_idx = span_idx
++                assert span_end_idx <= data_args.max_word_token_len + 2*is_bert, f"{span_end_idx} is beyond max len {data_args.max_word_token_len + 2*is_bert}. Note 2 extra seq len added if bert tokenizer"
                  # generate indexes into alias table.
                  alias_trie_idx = entity_symbols.get_alias_idx(alias)
                  alias_qids = np.array(entity_symbols.get_qid_cands(alias))
@@ -197,7 +578,37 @@ index a38be07..f3c6584 100644
                      # assert not data_args.train_in_candidates
                      if not data_args.train_in_candidates:
                          # set class label to be "not in candidate set"
-@@ -464,7 +466,7 @@ def process_emb_helper(input_args):
+@@ -268,11 +269,7 @@ def process_data_subsent_helper(input_args):
+                 example_aliases[idx:idx+1] = alias_trie_idx
+                 example_aliases_locs_start[idx:idx+1] = span_start_idx
+                 # The span_idxs are [start, end). We want [start, end]. So subtract 1 from end idx.
+-                example_aliases_locs_end[idx:idx+1] = span_end_idx-1
+-                # If the final token is greater than the sentence length, truncate it. This happens due to windowing which enusre that start is within
+-                # the max token len. These edge aliases are scored in another subsent.
+-                if example_aliases_locs_end[idx:idx+1] >= data_args.max_word_token_len:
+-                    example_aliases_locs_end[idx:idx+1] = data_args.max_word_token_len-1
++                example_aliases_locs_end[idx:idx + 1] = span_end_idx - 1
+                 example_alias_list_pos[idx:idx+1] = alias_pos
+                 # leave as -1 if it's not an alias we want to predict; we get these if we split a sentence and need to only predict subsets
+                 if idx in aliases_to_predict:
+@@ -347,7 +344,6 @@ def generate_slice_data_helper(input_args):
+                 slices[FINAL_LOSS] = {str(i):1.0 for i in range(len(aliases)) if anchor[i] is True}
+             else:
+                 slices[FINAL_LOSS] = {str(i):1.0 for i in range(len(aliases))}
+-
+             # If not use_weak_label, only the anchor is True aliases will be given to the model
+             # We must re-index alias to predict to be in terms of anchors == True
+             # Ex: anchors = [F, T, T, F, F, T]
+@@ -365,7 +361,7 @@ def generate_slice_data_helper(input_args):
+                 # This is because the indexing will change when we remove False anchors (see comment example above)
+                 slices = data_utils.correct_not_augmented_dict_values(anchor, slices)
+                 max_cands_per_alias = data_utils.correct_not_augmented_max_cands(anchor, max_cands_per_alias)
+-            # logging.debug(line, slices)
++            # logger.debug(line, slices)
+             # Remove slices that have no aliases to predict
+             for slice_name in list(slices.keys()):
+                 if len(slices[slice_name]) <= 0:
+@@ -470,7 +466,7 @@ def process_emb_helper(input_args):
      # alias entity table and embeddings have already been prepped by now so
      # we can pass None for entity_symbols to avoid huge memory cost of
      # duplicating entity_symbols across processes
@@ -206,7 +617,267 @@ index a38be07..f3c6584 100644
          num_aliases_with_pad=num_aliases_with_pad, num_cands_K=num_cands_K,
          log_func=logging.debug)
      logging.debug(f'alias table size {len(pickle.dumps(alias2entity_table, -1))}')
-@@ -880,8 +882,11 @@ def main():
+@@ -504,13 +500,13 @@ def process_emb_helper(input_args):
+ # Parent functions of multiprocesses
+ #===========================================#
+ 
+-def generate_data_subsent(args, use_weak_label, dataset_is_eval, chunk_prep_dir, predata_prep_dir):
+-    logging.debug('Starting to extract subsentences')
++def generate_data_subsent(args, use_weak_label, dataset_is_eval, chunk_prep_dir, predata_prep_dir, logger):
++    logger.debug('Starting to extract subsentences')
+     start = time.time()
+     chunk_metadata = utils.load_json_file(os.path.join(chunk_prep_dir, 'metadata.json'))
+     num_chunks = len(chunk_metadata['chunks'])
+     num_processes = min(args.run_config.dataset_threads, int(multiprocessing.cpu_count()))
+-    logging.debug("Parallelizing with " + str(num_processes) + " threads.")
++    logger.debug("Parallelizing with " + str(num_processes) + " threads.")
+     sent_file_path = os.path.join(predata_prep_dir, 'sent_chunk')
+     out_files = [f'{sent_file_path}_{i}.jsonl' for i in range(num_chunks)]
+     all_process_args = [{'chunk_idx': i,
+@@ -533,11 +529,11 @@ def generate_data_subsent(args, use_weak_label, dataset_is_eval, chunk_prep_dir,
+         idx += data_len
+     metadata = {'chunks': chunks, 'total_num_exs': idx}
+     utils.dump_json_file(os.path.join(predata_prep_dir, 'metadata.json'), metadata)
+-    logging.debug(f'Extracted {idx} sub-sentences in {round(time.time() - start,2)}s')
++    logger.debug(f'Extracted {idx} sub-sentences in {round(time.time() - start,2)}s')
+ 
+ 
+-def process_data_subsent(args, predata_prep_dir, data_prep_dir, dataset_name, dataset_is_eval):
+-    logging.debug('Building data chunks...')
++def process_data_subsent(args, predata_prep_dir, data_prep_dir, dataset_name, dataset_is_eval, logger):
++    logger.debug('Building data chunks...')
+     start = time.time()
+     chunk_metadata = utils.load_json_file(os.path.join(predata_prep_dir, 'metadata.json'))
+     num_chunks = len(chunk_metadata['chunks'])
+@@ -545,7 +541,7 @@ def process_data_subsent(args, predata_prep_dir, data_prep_dir, dataset_name, da
+     is_bert = load_wordsymbols(args.data_config).is_bert
+ 
+     num_processes = min(args.run_config.dataset_threads, int(multiprocessing.cpu_count()))
+-    logging.debug("Parallelizing with " + str(num_processes) + " threads.")
++    logger.debug("Parallelizing with " + str(num_processes) + " threads.")
+ 
+     num_aliases_M = args.data_config.max_aliases
+     # i1 is 8-bit ints, i2 is 16-bit ints, i4 is 32-bit ints, i8 is 64-bit ints
+@@ -572,6 +568,7 @@ def process_data_subsent(args, predata_prep_dir, data_prep_dir, dataset_name, da
+     all_process_args = [{'chunk_idx': i,
+                         'args': args,
+                         'dataset_is_eval': dataset_is_eval,
++                        'is_bert': is_bert,
+                         'in_file': chunk_metadata['chunks'][i]['path'],
+                         'len': chunk_metadata['chunks'][i]['len'],
+                         'start_idx':  chunk_metadata['chunks'][i]['start_idx'],
+@@ -586,10 +583,10 @@ def process_data_subsent(args, predata_prep_dir, data_prep_dir, dataset_name, da
+     # emb data
+     metadata = {'data_file': dataset_name, 'storage_type': storage_type, 'total_num_exs': chunk_metadata['total_num_exs'], 'chunks': chunk_metadata['chunks']}
+     utils.dump_json_file(os.path.join(data_prep_dir, 'metadata.json'), metadata)
+-    logging.debug(f'Finished building chunks in {round(time.time() - start,2)}s')
++    logger.debug(f'Finished building chunks in {round(time.time() - start,2)}s')
+ 
+-def generate_slice_data(args, use_weak_label, dataset_is_eval, chunk_prep_dir, slice_prep_dir):
+-    logging.debug('Starting to extract slice data')
++def generate_slice_data(args, use_weak_label, dataset_is_eval, chunk_prep_dir, slice_prep_dir, logger):
++    logger.debug('Starting to extract slice data')
+     start = time.time()
+ 
+     chunk_metadata = utils.load_json_file(os.path.join(chunk_prep_dir, 'metadata.json'))
+@@ -602,7 +599,7 @@ def generate_slice_data(args, use_weak_label, dataset_is_eval, chunk_prep_dir, s
+         assert BASE_SLICE in slice_names
+ 
+     num_processes = min(args.run_config.dataset_threads, int(multiprocessing.cpu_count()))
+-    logging.debug("Parallelizing with " + str(num_processes) + " threads.")
++    logger.debug("Parallelizing with " + str(num_processes) + " threads.")
+     slice_file_path = os.path.join(slice_prep_dir, 'slice_chunk')
+     out_files = [f'{slice_file_path}_{i}.jsonl' for i in range(num_chunks)]
+     all_process_args = [{'chunk_idx': i,
+@@ -633,8 +630,8 @@ def generate_slice_data(args, use_weak_label, dataset_is_eval, chunk_prep_dir, s
+         global_max_a2p = max(max_a2p, global_max_a2p)
+         global_max_sent_idx = max(max_sent_idx, global_max_sent_idx)
+         global_max_cands = max(max_cands, global_max_cands)
+-    logging.debug(f"Max aliases2predict GLOBAL is {global_max_a2p}")
+-    logging.debug(f"Max sentidx GLOBAL is {global_max_sent_idx}")
++    logger.debug(f"Max aliases2predict GLOBAL is {global_max_a2p}")
++    logger.debug(f"Max sentidx GLOBAL is {global_max_sent_idx}")
+     metadata = {'chunks': chunks,
+         'total_num_exs': idx,
+         'max_a2p': global_max_a2p,
+@@ -642,10 +639,10 @@ def generate_slice_data(args, use_weak_label, dataset_is_eval, chunk_prep_dir, s
+         'max_sent_idx': global_max_sent_idx,
+         'slice_names': slice_names}
+     utils.dump_json_file(os.path.join(slice_prep_dir, 'metadata.json'), metadata)
+-    logging.debug(f'Extracted {idx} slice data in {round(time.time() - start,2)}s')
++    logger.debug(f'Extracted {idx} slice data in {round(time.time() - start,2)}s')
+ 
+-def process_slice_data(args, dataset_name, sent_idx_file, slice_prep_dir, slice_final_prep_dir):
+-    logging.debug('Building slice indices...')
++def process_slice_data(args, dataset_name, sent_idx_file, slice_prep_dir, slice_final_prep_dir, logger):
++    logger.debug('Building slice indices...')
+     start = time.time()
+     chunk_metadata = utils.load_json_file(os.path.join(slice_prep_dir, 'metadata.json'))
+     num_chunks = len(chunk_metadata['chunks'])
+@@ -655,7 +652,7 @@ def process_slice_data(args, dataset_name, sent_idx_file, slice_prep_dir, slice_
+     slice_names = chunk_metadata['slice_names']
+     total_num_exs = chunk_metadata['total_num_exs']
+     num_processes = min(args.run_config.dataset_threads, int(multiprocessing.cpu_count()))
+-    logging.debug("Parallelizing with " + str(num_processes) + " threads.")
++    logger.debug("Parallelizing with " + str(num_processes) + " threads.")
+ 
+     # Create shared memory mapped file for saving slice indices
+     # For each row in the dataset, we have a slice_dt object for each slice in slice_names
+@@ -688,14 +685,14 @@ def process_slice_data(args, dataset_name, sent_idx_file, slice_prep_dir, slice_
+     pool.close()
+     pool.join()
+     # save metadata
+-    logging.debug(f'Finished building slice indices in {round(time.time() - start,2)}s')
++    logger.debug(f'Finished building slice indices in {round(time.time() - start,2)}s')
+     return storage_type
+ 
+-def process_emb(args, data_prep_dir, data_feats_prep_dir, num_candidates_K, num_aliases_with_pad):
++def process_emb(args, data_prep_dir, data_feats_prep_dir, num_candidates_K, num_aliases_with_pad, logger):
+     # want to reuse objects that have been prepped at this point
+     orig_preprocessed_val = args.data_config.overwrite_preprocessed_data
+     args.data_config.overwrite_preprocessed_data = False
+-    logging.debug('Preprocessing embeddings for the data...')
++    logger.debug('Preprocessing embeddings for the data...')
+     start = time.time()
+     # open memory mapped file for data -- needed for candidates
+     data_metadata = utils.load_json_file(os.path.join(data_prep_dir, 'metadata.json'))
+@@ -716,7 +713,7 @@ def process_emb(args, data_prep_dir, data_feats_prep_dir, num_candidates_K, num_
+             assert "dtype" in emb, f"You need the dtype key for {emb} in the embedding config: \"dtype:\" (int16, float,...) for batch_prep to occur."
+             shape = (data_metadata['total_num_exs'],num_aliases_M*num_candidates_K*emb.dim)
+             dtype = emb.dtype
+-            logging.debug(f"Setting dtype of {emb.key} to {dtype}")
++            logger.debug(f"Setting dtype of {emb.key} to {dtype}")
+             batch_prep_file_name = f'{os.path.splitext(data_file)[0]}_{emb.key}_{dtype}.pt'
+             mmap_file = np.memmap(batch_prep_file_name, dtype=dtype, mode='w+', shape=shape)
+             batch_prepped_emb_data[emb.key]['dtype'] = dtype
+@@ -724,11 +721,11 @@ def process_emb(args, data_prep_dir, data_feats_prep_dir, num_candidates_K, num_
+             batch_prepped_emb_data[emb.key]['file_name'] = batch_prep_file_name
+ 
+     # make sure embeddings to batch_prep have been prepped
+-    prep_all_embs(args)
++    prep_all_embs(args, logger=logger)
+ 
+     # call subprocesses
+     num_processes = min(args.run_config.dataset_threads, int(multiprocessing.cpu_count()))
+-    logging.debug("Parallelizing with " + str(num_processes) + " threads.")
++    logger.debug("Parallelizing with " + str(num_processes) + " threads.")
+ 
+     all_process_args = [{'chunk_idx': i,
+                         'args': args,
+@@ -755,12 +752,12 @@ def process_emb(args, data_prep_dir, data_feats_prep_dir, num_candidates_K, num_
+ 
+     metadata = {'batch_prepped_files': batch_prepped_emb_data, 'total_num_exs': data_metadata['total_num_exs'], 'data_config': batch_prepped_data_config_file}
+     utils.dump_json_file(os.path.join(data_feats_prep_dir, 'metadata.json'), metadata)
+-    logging.debug(f'Finished batch prepping embs in {round(time.time() - start,2)}s')
++    logger.debug(f'Finished batch prepping embs in {round(time.time() - start,2)}s')
+     # revert back args
+     args.data_config.overwrite_preprocessed_data = orig_preprocessed_val
+ 
+-def get_idx_mapping(data_prep_dir, dataset_name):
+-    logging.debug('Getting sentence to data idx mapping')
++def get_idx_mapping(data_prep_dir, dataset_name, logger):
++    logger.debug('Getting sentence to data idx mapping')
+     start = time.time()
+     data_metadata = json.load(open(os.path.join(data_prep_dir, 'metadata.json'), 'r'))
+     storage_type = [tuple(type) for type in data_metadata['storage_type']]
+@@ -774,13 +771,13 @@ def get_idx_mapping(data_prep_dir, dataset_name):
+             sent_idx_to_idx[row['sent_idx']] = [id]
+     sent_idx_file = os.path.splitext(dataset_name)[0] + "_sent_idx.json"
+     utils.dump_json_file(sent_idx_file, sent_idx_to_idx)
+-    logging.debug(f'Finished mapping in {round(time.time() - start,2)}s')
++    logger.debug(f'Finished mapping in {round(time.time() - start,2)}s')
+ 
+ #===========================================#
+ # Main prep functions
+ #===========================================#
+ 
+-def prep_data(args, use_weak_label, dataset_is_eval, input_src='', chunk_data=True, ext_subsent=True, build_data=True, batch_prep_embeddings=True,
++def prep_data(args, use_weak_label, dataset_is_eval, logger, input_src='', chunk_data=True, ext_subsent=True, build_data=True, batch_prep_embeddings=True,
+     prep_dir='', dataset_name='', keep_all=False):
+     data_tag = os.path.splitext(os.path.basename(dataset_name))[0]
+     chunk_prep_dir = f'{prep_dir}/{data_tag}/chunks'
+@@ -798,33 +795,33 @@ def prep_data(args, use_weak_label, dataset_is_eval, input_src='', chunk_data=Tr
+ 
+     entity_symbols, num_cands_K, num_aliases_with_pad = get_entities(args)
+     AliasEntityTable.prep(args, entity_symbols, num_cands_K=num_cands_K, num_aliases_with_pad=num_aliases_with_pad,
+-    log_func=logging.debug)
++    log_func=logger.debug)
+ 
+     # Chunk text into multiple files
+     if chunk_data or run_all:
+-        chunk_text_data(args, input_src, chunk_prep_dir)
++        chunk_text_data(args, input_src, chunk_prep_dir, logger=logger)
+ 
+     # Extract subsentences
+     if ext_subsent or run_all:
+-        generate_data_subsent(args, use_weak_label, dataset_is_eval, chunk_prep_dir, predata_prep_dir)
++        generate_data_subsent(args, use_weak_label, dataset_is_eval, chunk_prep_dir, predata_prep_dir, logger=logger)
+ 
+     # Build data arrays
+     if build_data or run_all:
+         # dataset name needed for optional dumping of filtered data
+-        process_data_subsent(args, predata_prep_dir, data_prep_dir, dataset_name, dataset_is_eval)
++        process_data_subsent(args, predata_prep_dir, data_prep_dir, dataset_name, dataset_is_eval, logger=logger)
+ 
+         # Get sentence idx mapping to be able to subsample slices
+-        get_idx_mapping(data_prep_dir, dataset_name)
++        get_idx_mapping(data_prep_dir, dataset_name, logger=logger)
+ 
+     # Preprocess embeddings
+     if batch_prep_embeddings or run_all:
+-        process_emb(args, data_prep_dir, data_feats_prep_dir, num_candidates_K=num_cands_K, num_aliases_with_pad=num_aliases_with_pad)
++        process_emb(args, data_prep_dir, data_feats_prep_dir, num_candidates_K=num_cands_K, num_aliases_with_pad=num_aliases_with_pad, logger=logger)
+ 
+     # TODO: way to check for existence to decide to skip a step?
+     # TODO: clean up and remove unnecessary files -- leave metadata?
+     # by default we remove the data chunks
+     if not keep_all:
+-        logging.debug('Cleaning up and removing chunk files...')
++        logger.debug('Cleaning up and removing chunk files...')
+         text_chunk_files = glob.glob(f'{chunk_prep_dir}/*jsonl')
+         for file in text_chunk_files:
+             os.remove(file)
+@@ -838,8 +835,8 @@ def prep_data(args, use_weak_label, dataset_is_eval, input_src='', chunk_data=Tr
+             os.remove(file)
+ 
+ def prep_slice(args, file, use_weak_label, dataset_is_eval, dataset_name,
+-    sent_idx_file, storage_config, keep_all=False):
+-    logging.debug(f'Prepping slice {file} ...')
++    sent_idx_file, storage_config, logger, keep_all=False):
++    logger.debug(f'Prepping slice {file} ...')
+     prep_dir = get_data_prep_dir(args)
+     data_tag = os.path.splitext(os.path.basename(dataset_name))[0]
+     chunk_prep_dir = f'{prep_dir}/{data_tag}/chunks'
+@@ -852,22 +849,23 @@ def prep_slice(args, file, use_weak_label, dataset_is_eval, dataset_name,
+     # TODO: check if chunked data already exists first, reuse one from main dataset?
+     # chunk text data
+     chunk_text_data(args=args, input_src=os.path.join(args.data_config.data_dir, file),
+-        chunk_prep_dir=chunk_prep_dir)
++        chunk_prep_dir=chunk_prep_dir, logger=logger)
+ 
+     # update slice data
+     generate_slice_data(args=args, use_weak_label=use_weak_label, dataset_is_eval=dataset_is_eval,
+-        chunk_prep_dir=chunk_prep_dir, slice_prep_dir=slice_prep_dir)
++        chunk_prep_dir=chunk_prep_dir, slice_prep_dir=slice_prep_dir, logger=logger)
+ 
+     # save slice data into memory mapped file
+     storage_type = process_slice_data(args=args, dataset_name=dataset_name,
+-        sent_idx_file=sent_idx_file, slice_prep_dir=slice_prep_dir, slice_final_prep_dir=slice_final_prep_dir)
++        sent_idx_file=sent_idx_file, slice_prep_dir=slice_prep_dir, slice_final_prep_dir=slice_final_prep_dir,
++        logger=logger)
+     # save storage type file
+     np.save(storage_config, storage_type, allow_pickle=True)
+ 
+-    logging.debug("Done prepping slice")
++    logger.debug("Done prepping slice")
+ 
+     if not keep_all:
+-        logging.debug('Cleaning up and removing chunk files...')
++        logger.debug('Cleaning up and removing chunk files...')
+         text_chunk_files = glob.glob(f'{chunk_prep_dir}/*jsonl')
+         for file in text_chunk_files:
+             os.remove(file)
+@@ -884,15 +882,18 @@ def main():
      config_parser = argparse.ArgumentParser('Where is config script?')
      config_parser.add_argument('--config_script', type=str, default='run_config.json',
                          help='This config should mimc the config.py config json with parameters you want to override.')
@@ -219,6 +890,159 @@ index a38be07..f3c6584 100644
      train_utils.setup_train_heads_and_eval_slices(args)
      formatter = logging.Formatter('%(asctime)s %(message)s')
      numeric_level = getattr(logging, args.run_config.loglevel.upper(), None)
+     if not isinstance(numeric_level, int):
+         raise ValueError('Invalid log level: %s' % args.run_config.loglevel)
+     logging.basicConfig(level=numeric_level, format='%(asctime)s %(message)s')
+-    log = logging.getLogger()
++    logger = logging.getLogger()
+ 
+     prep_dir = get_data_prep_dir(args)
+     utils.ensure_dir(prep_dir)
+@@ -901,26 +902,27 @@ def main():
+ 
+     fh = logging.FileHandler(log_name, mode='w')
+     fh.setFormatter(formatter)
+-    log.addHandler(fh)
++    logger.addHandler(fh)
+ 
+     # Dump command line arguments
+-    logging.debug("Machine: " + os.uname()[1])
+-    logging.debug("CMD: python " + " ".join(sys.argv))
++    logger.debug("Machine: " + os.uname()[1])
++    logger.debug("CMD: python " + " ".join(sys.argv))
+ 
+     # Prep embs first since they may be used for batch prepping when preparing datasets
+     if args.prep_config.prep_embs:
+-        logging.info('Prepping embs...')
++        logger.info('Prepping embs...')
+         start = time.time()
+-        prep_all_embs(args)
+-        logging.info(f'Done prepping embs in {round(time.time() - start, 2)}s!')
++        prep_all_embs(args, logger=logger)
++        logger.info(f'Done prepping embs in {round(time.time() - start, 2)}s!')
+ 
+     if args.prep_config.prep_train:
+-        logging.info('Prepping train...')
++        logger.info('Prepping train...')
+         dataset = generate_save_data_name(
+             data_args=args.data_config,
+             use_weak_label=args.data_config.train_dataset.use_weak_label,
+             split_name=os.path.splitext(args.data_config.train_dataset.file)[0])
+         prep_data(args, use_weak_label=args.data_config.train_dataset.use_weak_label, dataset_is_eval=False,
++            logger=logger,
+             input_src=os.path.join(args.data_config.data_dir, args.data_config.train_dataset.file),
+             chunk_data=args.prep_config.chunk_data,
+             ext_subsent=args.prep_config.ext_subsent,
+@@ -928,17 +930,18 @@ def main():
+             batch_prep_embeddings=args.prep_config.batch_prep_embeddings,
+             prep_dir=prep_dir,
+             dataset_name=os.path.join(prep_dir, dataset), keep_all=args.prep_config.keep_all)
+-        logging.debug(f'Prepped {args.data_config.train_dataset.file}.')
+-        logging.info(f'Done with train prep in {round(time.time() - start, 2)}s!')
++        logger.debug(f'Prepped {args.data_config.train_dataset.file}.')
++        logger.info(f'Done with train prep in {round(time.time() - start, 2)}s!')
+ 
+     if args.prep_config.prep_dev:
+-        logging.info('Prepping dev...')
++        logger.info('Prepping dev...')
+         start = time.time()
+         dataset = generate_save_data_name(
+             data_args=args.data_config,
+             use_weak_label=args.data_config.dev_dataset.use_weak_label,
+             split_name=os.path.splitext(args.data_config.dev_dataset.file)[0])
+         prep_data(args, use_weak_label=args.data_config.dev_dataset.use_weak_label, dataset_is_eval=True,
++              logger=logger,
+               input_src=os.path.join(args.data_config.data_dir, args.data_config.dev_dataset.file),
+               chunk_data=args.prep_config.chunk_data,
+               ext_subsent=args.prep_config.ext_subsent,
+@@ -946,17 +949,18 @@ def main():
+               batch_prep_embeddings=args.prep_config.batch_prep_embeddings,
+               prep_dir=prep_dir,
+               dataset_name=os.path.join(prep_dir, dataset), keep_all=args.prep_config.keep_all)
+-        logging.debug(f'Prepped {args.data_config.dev_dataset.file}')
+-        logging.info(f'Done with dev prep in {round(time.time() - start, 2)}s!')
++        logger.debug(f'Prepped {args.data_config.dev_dataset.file}')
++        logger.info(f'Done with dev prep in {round(time.time() - start, 2)}s!')
+ 
+     if args.prep_config.prep_test:
+-        logging.info('Prepping test...')
++        logger.info('Prepping test...')
+         start = time.time()
+         dataset = generate_save_data_name(
+             data_args=args.data_config,
+             use_weak_label=args.data_config.test_dataset.use_weak_label,
+             split_name=os.path.splitext(args.data_config.test_dataset.file)[0])
+         prep_data(args, use_weak_label=args.data_config.test_dataset.use_weak_label, dataset_is_eval=True,
++              logger=logger,
+               input_src=os.path.join(args.data_config.data_dir, args.data_config.test_dataset.file),
+               chunk_data=args.prep_config.chunk_data,
+               ext_subsent=args.prep_config.ext_subsent,
+@@ -964,11 +968,11 @@ def main():
+               batch_prep_embeddings=args.prep_config.batch_prep_embeddings,
+               prep_dir=prep_dir,
+               dataset_name=os.path.join(prep_dir, dataset), keep_all=args.prep_config.keep_all)
+-        logging.debug(f'Prepped {args.data_config.test_dataset.file}')
+-        logging.info(f'Done with test prep in {round(time.time() - start, 2)}s!')
++        logger.debug(f'Prepped {args.data_config.test_dataset.file}')
++        logger.info(f'Done with test prep in {round(time.time() - start, 2)}s!')
+ 
+     if args.prep_config.prep_train_slices:
+-        logging.info('Prepping train slices...')
++        logger.info('Prepping train slices...')
+         start = time.time()
+         dataset_name = data_utils.generate_slice_name(args, args.data_config, use_weak_label=args.data_config.train_dataset.use_weak_label,
+             split_name="slice_" + os.path.splitext(args.data_config.train_dataset.file)[0],
+@@ -978,13 +982,13 @@ def main():
+         sent_idx_to_idx_file = os.path.join(prep_dir, data_utils.get_sent_idx_file(dataset_name))
+         prep_slice(args, args.data_config.train_dataset.file, args.data_config.train_dataset.use_weak_label,
+             dataset_is_eval=False, dataset_name=full_dataset_name,
+-            sent_idx_file=sent_idx_to_idx_file, storage_config=config_dataset_name,
++            sent_idx_file=sent_idx_to_idx_file, storage_config=config_dataset_name, logger=logger,
+             keep_all=args.prep_config.keep_all)
+-        logging.debug(f'Prepped slices from {args.data_config.train_dataset.file} to {full_dataset_name}.')
+-        logging.info(f'Done with train slice prep in {round(time.time() - start, 2)}s!')
++        logger.debug(f'Prepped slices from {args.data_config.train_dataset.file} to {full_dataset_name}.')
++        logger.info(f'Done with train slice prep in {round(time.time() - start, 2)}s!')
+ 
+     if args.prep_config.prep_dev_eval_slices:
+-        logging.info('Prepping dev slices...')
++        logger.info('Prepping dev slices...')
+         start = time.time()
+         dataset_name = data_utils.generate_slice_name(args, args.data_config, use_weak_label=args.data_config.dev_dataset.use_weak_label,
+             split_name="slice_" + os.path.splitext(args.data_config.dev_dataset.file)[0],
+@@ -994,13 +998,13 @@ def main():
+         sent_idx_to_idx_file = os.path.join(prep_dir, data_utils.get_sent_idx_file(dataset_name))
+         prep_slice(args, args.data_config.dev_dataset.file, args.data_config.dev_dataset.use_weak_label,
+             dataset_is_eval=True, dataset_name=full_dataset_name,
+-            sent_idx_file=sent_idx_to_idx_file, storage_config=config_dataset_name,
++            sent_idx_file=sent_idx_to_idx_file, storage_config=config_dataset_name, logger=logger,
+             keep_all=args.prep_config.keep_all)
+-        logging.debug(f'Prepped slices from {args.data_config.dev_dataset} to {full_dataset_name}.')
+-        logging.info(f'Done with dev slice prep in {round(time.time() - start, 2)}s!')
++        logger.debug(f'Prepped slices from {args.data_config.dev_dataset} to {full_dataset_name}.')
++        logger.info(f'Done with dev slice prep in {round(time.time() - start, 2)}s!')
+ 
+     if args.prep_config.prep_test_eval_slices:
+-        logging.info('Prepping test slices...')
++        logger.info('Prepping test slices...')
+         start = time.time()
+         dataset_name = data_utils.generate_slice_name(args, args.data_config, use_weak_label=args.data_config.test_dataset.use_weak_label,
+             split_name="slice_" + os.path.splitext(args.data_config.test_dataset.file)[0],
+@@ -1010,10 +1014,10 @@ def main():
+         sent_idx_to_idx_file = os.path.join(prep_dir, data_utils.get_sent_idx_file(dataset_name))
+         prep_slice(args, args.data_config.test_dataset.file, args.data_config.test_dataset.use_weak_label,
+             dataset_is_eval=True, dataset_name=full_dataset_name,
+-            sent_idx_file=sent_idx_to_idx_file, storage_config=config_dataset_name,
++            sent_idx_file=sent_idx_to_idx_file, storage_config=config_dataset_name, logger=logger,
+             keep_all=args.prep_config.keep_all)
+-        logging.debug(f'Prepped slices from {args.data_config.test_dataset} to {full_dataset_name}.')
+-        logging.info(f'Done with test slice prep in {round(time.time() - start, 2)}s!')
++        logger.debug(f'Prepped slices from {args.data_config.test_dataset} to {full_dataset_name}.')
++        logger.info(f'Done with test slice prep in {round(time.time() - start, 2)}s!')
+ 
+ if __name__ == '__main__':
+     main()
+\ No newline at end of file
 diff --git bootleg/run.py bootleg/run.py
 index 5a27943..3dcaa78 100644
 --- bootleg/run.py
@@ -525,6 +1349,419 @@ index eb5b7e0..71b90da 100644
          loss_file = "loss_results"
          loss_file += train_utils.get_file_suffix(args)
          loss_file += '.jsonl'
+diff --git bootleg/utils/eval_utils.py bootleg/utils/eval_utils.py
+index ef8314f..3fd1b65 100644
+--- bootleg/utils/eval_utils.py
++++ bootleg/utils/eval_utils.py
+@@ -1,9 +1,15 @@
++import glob
++import multiprocessing
++import shutil
++import tempfile
+ from collections import  OrderedDict
+ 
+ import logging
+ import jsonlines
+ import numpy as np
+ import os
++
++import ujson
+ from sklearn.metrics import precision_recall_fscore_support
+ from tabulate import tabulate
+ import time
+@@ -11,6 +17,7 @@ import torch
+ from tqdm import tqdm
+ 
+ from bootleg.symbols.constants import *
++from bootleg.symbols.entity_symbols import EntitySymbols
+ from bootleg.utils import train_utils, utils
+ 
+ import torch.nn.functional as F
+@@ -205,32 +212,65 @@ def run_dump_preds(args, test_data_file, trainer, dataloader, logger, entity_sym
+     Remember that if a sentence has all gold=False anchors, it's dropped and will not be seen
+     If a subsplit of a sentence has all gold=False anchors, it will also be dropped and not seen
+     """
++    num_processes = min(args.run_config.dataset_threads, int(multiprocessing.cpu_count()*0.9))
+     # we only care about the entity embeddings for the final slice head
+     eval_folder = train_utils.get_eval_folder(args, test_data_file)
+     utils.ensure_dir(eval_folder)
+ 
+     # write to file (M x hidden x size for each data point -- next step will deal with recovering original sentence indices for overflowing sentences)
+     test_file_tag = test_data_file.split('.jsonl')[0]
+-    entity_emb_file = os.path.join(eval_folder, f'{test_file_tag}_entity_embs.pt')
+-    emb_file_config = entity_emb_file.split('.pt')[0] + '_config'
++    unmerged_entity_emb_file = os.path.join(eval_folder, f'{test_file_tag}_entity_embs.pt')
++    merged_entity_emb_file = os.path.join(eval_folder, f'{test_file_tag}_entity_embs_merged.pt')
++    emb_file_config = unmerged_entity_emb_file.split('.pt')[0] + '_config'
+     M = args.data_config.max_aliases
+     K = entity_symbols.max_candidates + (not args.data_config.train_in_candidates)
+-    # TODO: fix extra dimension issue
+     if dump_embs:
+-        storage_type = np.dtype([('M', int), ('K', int), ('hidden_size', int), ('sent_idx', int), ('subsent_idx', int), ('alias_list_pos', int, M), ('entity_emb', float, M*args.model_config.hidden_size),
+-        ('final_loss_true', int, M), ('final_loss_pred', int, M), ('final_loss_prob', float, M), ('final_loss_cand_probs', float, M*K)])
++        unmerged_storage_type = np.dtype([('M', int),
++                                          ('K', int),
++                                          ('hidden_size', int),
++                                          ('sent_idx', int),
++                                          ('subsent_idx', int),
++                                          ('alias_list_pos', int, M),
++                                          ('entity_emb', float, M*args.model_config.hidden_size),
++                                          ('final_loss_true', int, M),
++                                          ('final_loss_pred', int, M),
++                                          ('final_loss_prob', float, M),
++                                          ('final_loss_cand_probs', float, M*K)])
++        merged_storage_type = np.dtype([('hidden_size', int),
++                             ('sent_idx', int),
++                             ('alias_list_pos', int),
++                             ('entity_emb', float, args.model_config.hidden_size),
++                             ('final_loss_pred', int),
++                             ('final_loss_prob', float),
++                             ('final_loss_cand_probs', float, K)])
+     else:
+         # don't need to extract contextualized entity embedding
+-        storage_type = np.dtype([('M', int), ('K', int), ('hidden_size', int), ('sent_idx', int), ('subsent_idx', int), ('alias_list_pos', int, M),
+-                                 ('final_loss_true', int, M), ('final_loss_pred', int, M), ('final_loss_prob', float, M), ('final_loss_cand_probs', float, M*K)])
+-    mmap_file = np.memmap(entity_emb_file, dtype=storage_type, mode='w+', shape=(len(dataloader.dataset),))
++        unmerged_storage_type = np.dtype([('M', int),
++                                          ('K', int),
++                                          ('hidden_size', int),
++                                          ('sent_idx', int),
++                                          ('subsent_idx', int),
++                                          ('alias_list_pos', int, M),
++                                          ('final_loss_true', int, M),
++                                          ('final_loss_pred', int, M),
++                                          ('final_loss_prob', float, M),
++                                          ('final_loss_cand_probs', float, M*K)])
++        merged_storage_type = np.dtype([('hidden_size', int),
++                             ('sent_idx', int),
++                             ('alias_list_pos', int),
++                             ('final_loss_pred', int),
++                             ('final_loss_prob', float),
++                             ('final_loss_cand_probs', float, K)])
++
++    mmap_file = np.memmap(unmerged_entity_emb_file, dtype=unmerged_storage_type, mode='w+', shape=(len(dataloader.dataset),))
+     # Init sent_idx to -1 for debugging
+     mmap_file[:]['sent_idx'] = -1
+-    np.save(emb_file_config, storage_type, allow_pickle=True)
+-    logger.debug(f'Created file {entity_emb_file} to save predictions.')
++    np.save(emb_file_config, unmerged_storage_type, allow_pickle=True)
++    logger.debug(f'Created file {unmerged_entity_emb_file} to save predictions.')
+ 
+     start_idx = 0
+     logger.info(f'{len(dataloader)*args.run_config.eval_batch_size} samples, {len(dataloader)} batches, {len(dataloader.dataset)} len dataset')
++    st = time.time()
+     for i, batch in enumerate(dataloader):
+         curr_batch_size = batch["sent_idx"].shape[0]
+         end_idx = start_idx + curr_batch_size
+@@ -265,25 +305,32 @@ def run_dump_preds(args, test_data_file, trainer, dataloader, logger, entity_sym
+ 
+         start_idx += curr_batch_size
+         if i % 100 == 0 and i != 0:
+-            logger.info(f'Saved {i} batches of predictions')
++            logger.info(f'Saved {i} batches of predictions out of {len(dataloader)}')
+ 
+     # restitch together and write data file
+     result_file = os.path.join(eval_folder, args.run_config.result_label_file)
+     logger.info(f'Writing predictions to {result_file}...')
+-    filt_pred_data = merge_subsentences(os.path.join(args.data_config.data_dir, test_data_file),
+-        mmap_file,
++    merge_subsentences(
++        num_processes,
++        os.path.join(args.data_config.data_dir, test_data_file),
++        merged_entity_emb_file,
++        merged_storage_type,
++        unmerged_entity_emb_file,
++        unmerged_storage_type,
+         dump_embs=dump_embs)
+-    sent_idx_map = get_sent_idx_map(filt_pred_data)
+-
+-    write_data_labels(filt_pred_data=filt_pred_data, data_file=os.path.join(args.data_config.data_dir, test_data_file), out_file=result_file,
+-        sent_idx_map=sent_idx_map, entity_dump=entity_symbols, train_in_candidates=args.data_config.train_in_candidates, dump_embs=dump_embs)
+-
++    st = time.time()
++    write_data_labels(num_processes=num_processes,
++        merged_entity_emb_file=merged_entity_emb_file, merged_storage_type=merged_storage_type,
++        data_file=os.path.join(args.data_config.data_dir, test_data_file), out_file=result_file,
++        train_in_candidates=args.data_config.train_in_candidates,
++        dump_embs=dump_embs, data_config=args.data_config)
+     out_emb_file = None
+     # save easier-to-use embedding file
+     if dump_embs:
+-        hidden_size = filt_pred_data[0]['hidden_size']
++        filt_emb_data = np.memmap(merged_entity_emb_file, dtype=merged_storage_type, mode="r+")
++        hidden_size = filt_emb_data[0]['hidden_size']
+         out_emb_file = os.path.join(eval_folder, args.run_config.result_emb_file)
+-        np.save(out_emb_file, filt_pred_data['entity_emb'].reshape(-1,hidden_size))
++        np.save(out_emb_file, filt_emb_data['entity_emb'].reshape(-1,hidden_size))
+         logger.info(f'Saving contextual entity embeddings to {out_emb_file}')
+     logger.info(f'Wrote predictions to {result_file}')
+     return result_file, out_emb_file
+@@ -313,7 +360,8 @@ def get_sent_start_map(data_file):
+         for line in f:
+             # keep track of the start idx in the condensed memory mapped file for each sentence (varying number of aliases)
+             assert line['sent_idx_unq'] not in sent_start_map, f'Sentence indices must be unique. {line["sent_idx_unq"]} already seen.'
+-            sent_start_map[line['sent_idx_unq']] = total_num_mentions
++            # Save as string for Marisa Tri later
++            sent_start_map[str(line['sent_idx_unq'])] = total_num_mentions
+             # We include false aliases for debugging (and alias_pos includes them)
+             total_num_mentions += len(line['aliases'])
+     # for k in sent_start_map:
+@@ -322,40 +370,70 @@ def get_sent_start_map(data_file):
+     return sent_start_map, total_num_mentions
+ 
+ # stich embs back together over sub-sentences, convert from sent_idx array to (sent_idx, alias_idx) array with varying numbers of aliases per sentence
+-# TODO: parallelize this
+-def merge_subsentences(data_file, full_pred_data, dump_embs=False):
++def merge_subsentences(num_processes, data_file, to_save_file, to_save_storage, to_read_file, to_read_storage, dump_embs=False):
++    logger = logging.getLogger(__name__)
++    logger.debug(f"Getting sentence mapping")
+     sent_start_map, total_num_mentions = get_sent_start_map(data_file)
++    sent_start_map_file = tempfile.NamedTemporaryFile(suffix="bootleg_sent_start_map")
++    utils.create_single_item_trie(sent_start_map, out_file=sent_start_map_file.name)
++    logger.debug(f"Done with sentence mapping")
++
++    full_pred_data = np.memmap(to_read_file, dtype=to_read_storage, mode='r')
+     M = int(full_pred_data[0]['M'])
+     K = int(full_pred_data[0]['K'])
+     hidden_size = int(full_pred_data[0]['hidden_size'])
+-    if dump_embs:
+-        storage_type = np.dtype([('hidden_size', int),
+-                             ('sent_idx', int),
+-                             ('alias_list_pos', int),
+-                             ('entity_emb', float, hidden_size),
+-                             ('final_loss_pred', int),
+-                             ('final_loss_prob', float),
+-                             ('final_loss_cand_probs', float, K)])
+-    else:
+-        storage_type = np.dtype([('hidden_size', int),
+-                             ('sent_idx', int),
+-                             ('alias_list_pos', int),
+-                             ('final_loss_pred', int),
+-                             ('final_loss_prob', float),
+-                             ('final_loss_cand_probs', float, K)])
+-    filt_emb_data = np.zeros(total_num_mentions, dtype=storage_type)
+-    filt_emb_data['hidden_size'] = hidden_size
+ 
++    filt_emb_data = np.memmap(to_save_file, dtype=to_save_storage, mode='w+', shape=(total_num_mentions,))
++    filt_emb_data['hidden_size'] = hidden_size
+     filt_emb_data['sent_idx'][:] = -1
+     filt_emb_data['alias_list_pos'][:] = -1
+ 
++    chunk_size = int(np.ceil(len(full_pred_data)/num_processes))
++    all_ids = list(range(0, len(full_pred_data)))
++    row_idx_set_chunks = [all_ids[ids:ids+chunk_size] for ids in range(0, len(full_pred_data), chunk_size)]
++    input_args = [
++        [M, K, hidden_size, dump_embs, chunk]
++        for chunk in row_idx_set_chunks
++    ]
++
++    logger.info(f"Merging sentences together with {num_processes} processes. Starting pool")
++
++    pool = multiprocessing.Pool(processes=num_processes,
++                                initializer=merge_subsentences_initializer,
++                                initargs=[
++                                    to_save_file,
++                                    to_save_storage,
++                                    to_read_file,
++                                    to_read_storage,
++                                    sent_start_map_file.name
++                                ])
++    logger.debug(f"Finished pool")
+     start = time.time()
+     seen_ids = set()
+-    seen_data = {}
+-    for r_idx, row in enumerate(full_pred_data):
++    for sent_ids_seen in pool.imap_unordered(merge_subsentences_hlp, input_args, chunksize=1):
++        for emb_id in sent_ids_seen:
++            assert emb_id not in seen_ids, f'{emb_id} already seen, something went wrong with sub-sentences'
++            seen_ids.add(emb_id)
++    sent_start_map_file.close()
++    logger.info(f'Time to merge sub-sentences {time.time()-start}s')
++    return
++
++def merge_subsentences_initializer(to_write_file, to_write_storage, to_read_file, to_read_storage, sent_start_map_file):
++    global filt_emb_data_global
++    filt_emb_data_global = np.memmap(to_write_file, dtype=to_write_storage, mode='r+')
++    global full_pred_data_global
++    full_pred_data_global = np.memmap(to_read_file, dtype=to_read_storage, mode='r+')
++    global sent_start_map_marisa_global
++    sent_start_map_marisa_global = utils.load_single_item_trie(sent_start_map_file)
++
++def merge_subsentences_hlp(args):
++    M, K, hidden_size, dump_embs, r_idx_set = args
++    seen_ids = set()
++    for r_idx in tqdm(r_idx_set):
++        row = full_pred_data_global[r_idx]
+         # get corresponding row to start writing into condensed memory mapped file
+-        sent_idx = row['sent_idx']
+-        sent_start_idx = sent_start_map[sent_idx]
++        sent_idx = str(row['sent_idx'])
++        sent_start_idx = sent_start_map_marisa_global[sent_idx][0][0]
+         # for each VALID mention, need to write into original alias list pos in list
+         for i, (true_val, alias_orig_pos) in enumerate(zip(row['final_loss_true'], row['alias_list_pos'])):
+             # bc we are are using the mentions which includes both true and false golds, true_val == -1 only for padded mentions or sub-sentence mentions
+@@ -364,33 +442,110 @@ def merge_subsentences(data_file, full_pred_data, dump_embs=False):
+                 emb_id = sent_start_idx + alias_orig_pos
+                 assert emb_id not in seen_ids, f'{emb_id} already seen, something went wrong with sub-sentences'
+                 if dump_embs:
+-                    filt_emb_data['entity_emb'][emb_id] = row['entity_emb'].reshape(M, hidden_size)[i]
+-                filt_emb_data['sent_idx'][emb_id] = sent_idx
+-                filt_emb_data['alias_list_pos'][emb_id] = alias_orig_pos
+-                filt_emb_data['final_loss_pred'][emb_id] = row['final_loss_pred'].reshape(M)[i]
+-                filt_emb_data['final_loss_prob'][emb_id] = row['final_loss_prob'].reshape(M)[i]
+-                filt_emb_data['final_loss_cand_probs'][emb_id] = row['final_loss_cand_probs'].reshape(M, K)[i]
+-                seen_ids.add(emb_id)
+-                seen_data[emb_id] = row
+-    logging.debug(f'Time to merge sub-sentences {time.time()-start}s')
+-    return filt_emb_data
++                    filt_emb_data_global['entity_emb'][emb_id] = row['entity_emb'].reshape(M, hidden_size)[i]
++                filt_emb_data_global['sent_idx'][emb_id] = sent_idx
++                filt_emb_data_global['alias_list_pos'][emb_id] = alias_orig_pos
++                filt_emb_data_global['final_loss_pred'][emb_id] = row['final_loss_pred'].reshape(M)[i]
++                filt_emb_data_global['final_loss_prob'][emb_id] = row['final_loss_prob'].reshape(M)[i]
++                filt_emb_data_global['final_loss_cand_probs'][emb_id] = row['final_loss_cand_probs'].reshape(M, K)[i]
++    return seen_ids
+ 
+ # get sent_idx, alias_idx mapping to emb idx for quick lookup
+-def get_sent_idx_map(filt_emb_data):
++def get_sent_idx_map(merged_entity_emb_file, merged_storage_type):
++    """ Get sent_idx, alias_idx mapping to emb idx for quick lookup """
++    filt_emb_data = np.memmap(merged_entity_emb_file, dtype=merged_storage_type, mode="r+")
+     sent_idx_map = {}
+     for i, row in enumerate(filt_emb_data):
+         sent_idx = row['sent_idx']
+         alias_idx = row['alias_list_pos']
+         assert sent_idx != -1 and alias_idx != -1, f"Sent {sent_idx}, Al {alias_idx}"
+-        sent_idx_map[(sent_idx, alias_idx)] = i
++        # string for Marisa Trie later
++        sent_idx_map[f"{sent_idx}_{alias_idx}"] = i
+     return sent_idx_map
+ 
+ # write new data with qids and entity emb ids
+ # TODO: parallelize this
+-def write_data_labels(filt_pred_data, data_file, out_file, sent_idx_map,
+-    entity_dump, train_in_candidates, dump_embs):
+-    with jsonlines.open(data_file) as f_in, jsonlines.open(out_file, 'w') as f_out:
+-        for line in f_in:
++def write_data_labels(num_processes, merged_entity_emb_file,
++                      merged_storage_type, data_file,
++                      out_file, train_in_candidates, dump_embs, data_config):
++    logger = logging.getLogger(__name__)
++
++    # Get sent mapping
++    start = time.time()
++    sent_idx_map = get_sent_idx_map(merged_entity_emb_file, merged_storage_type)
++    sent_idx_map_file = tempfile.NamedTemporaryFile(suffix="bootleg_sent_idx_map")
++    utils.create_single_item_trie(sent_idx_map, out_file=sent_idx_map_file.name)
++
++    # Chunk file for parallel writing
++    create_ex_indir = tempfile.TemporaryDirectory()
++    create_ex_outdir = tempfile.TemporaryDirectory()
++    logger.debug(f"Counting lines")
++    total_input = sum(1 for _ in open(data_file))
++    chunk_input = int(np.ceil(total_input/num_processes))
++    logger.debug(f"Chunking up {total_input} lines into subfiles of size {chunk_input} lines")
++    total_input_from_chunks, input_files_dict = utils.chunk_file(data_file, create_ex_indir.name, chunk_input)
++
++    input_files = list(input_files_dict.keys())
++    input_file_lines = [input_files_dict[k] for k in input_files]
++    output_files = [in_file_name.replace(create_ex_indir.name, create_ex_outdir.name) for in_file_name in input_files]
++    assert total_input == total_input_from_chunks, f"Lengths of files {total_input} doesn't mathc {total_input_from_chunks}"
++    logger.debug(f"Done chunking files")
++
++    logger.info(f'Starting to write files with {num_processes} processes')
++    pool = multiprocessing.Pool(processes=num_processes,
++                                initializer=write_data_labels_initializer,
++                                initargs=[
++                                    merged_entity_emb_file,
++                                    merged_storage_type,
++                                    sent_idx_map_file.name,
++                                    train_in_candidates,
++                                    dump_embs,
++                                    data_config
++                                ])
++
++    input_args = list(zip(input_files, input_file_lines, output_files))
++    # Store output files and counts for saving in next step
++    total = 0
++    for res in pool.imap(
++                    write_data_labels_hlp,
++                    input_args,
++                    chunksize=1
++                ):
++        total += 1
++
++    # Merge output files to final file
++    logger.debug(f"Merging output files")
++    with open(out_file, 'wb') as outfile:
++        for filename in glob.glob(os.path.join(create_ex_outdir.name, "*")):
++            if filename == out_file:
++                # don't want to copy the output into the output
++                continue
++            with open(filename, 'rb') as readfile:
++                shutil.copyfileobj(readfile, outfile)
++    sent_idx_map_file.close()
++    create_ex_indir.cleanup()
++    create_ex_outdir.cleanup()
++    logger.info(f'Time to write files {time.time()-start}s')
++
++def write_data_labels_initializer(merged_entity_emb_file, merged_storage_type, sent_idx_map_file, train_in_candidates, dump_embs, data_config):
++    global filt_emb_data_global
++    filt_emb_data_global = np.memmap(merged_entity_emb_file, dtype=merged_storage_type, mode="r+")
++    global sent_idx_map_global
++    sent_idx_map_global = utils.load_single_item_trie(sent_idx_map_file)
++    global train_in_candidates_global
++    train_in_candidates_global = train_in_candidates
++    global dump_embs_global
++    dump_embs_global = dump_embs
++    global entity_dump_global
++    entity_dump_global = EntitySymbols(load_dir=os.path.join(data_config.entity_dir, data_config.entity_map_dir),
++                                       alias_cand_map_file=data_config.alias_cand_map)
++
++
++def write_data_labels_hlp(args):
++    input_file, input_lines, output_file = args
++    with open(input_file) as f_in, open(output_file, 'w') as f_out:
++        for line in tqdm(f_in, total=input_lines, desc="Writing data"):
++            line = ujson.loads(line)
+             aliases = line['aliases']
+             sent_idx = line['sent_idx_unq']
+             qids = []
+@@ -399,16 +554,17 @@ def write_data_labels(filt_pred_data, data_file, out_file, sent_idx_map,
+             probs = []
+             cands = []
+             cand_probs = []
+-            entity_cands_qid = map_aliases_to_candidates(train_in_candidates, entity_dump, aliases)
++            entity_cands_qid = map_aliases_to_candidates(train_in_candidates_global, entity_dump_global, aliases)
+             # eid is entity id
+-            entity_cands_eid = map_aliases_to_candidates_eid(train_in_candidates, entity_dump, aliases)
++            entity_cands_eid = map_aliases_to_candidates_eid(train_in_candidates_global, entity_dump_global, aliases)
+             for al_idx, alias in enumerate(aliases):
+-                assert (sent_idx, al_idx) in sent_idx_map, f'Dumped prediction data does not match data file. Can not find {sent_idx} - {al_idx}'
+-                emb_idx = sent_idx_map[(sent_idx, al_idx)]
++                sent_idx_key = f"{sent_idx}_{al_idx}"
++                assert sent_idx_key in sent_idx_map_global, f'Dumped prediction data does not match data file. Can not find {sent_idx} - {al_idx}'
++                emb_idx = sent_idx_map_global[sent_idx_key][0][0]
+                 ctx_emb_ids.append(emb_idx)
+-                prob = filt_pred_data[emb_idx]['final_loss_prob']
+-                cand_prob = filt_pred_data[emb_idx]['final_loss_cand_probs']
+-                pred_cand = filt_pred_data[emb_idx]['final_loss_pred']
++                prob = filt_emb_data_global[emb_idx]['final_loss_prob']
++                cand_prob = filt_emb_data_global[emb_idx]['final_loss_cand_probs']
++                pred_cand = filt_emb_data_global[emb_idx]['final_loss_pred']
+                 eid = entity_cands_eid[al_idx][pred_cand]
+                 qid = entity_cands_qid[al_idx][pred_cand]
+                 qids.append(qid)
+@@ -421,7 +577,6 @@ def write_data_labels(filt_pred_data, data_file, out_file, sent_idx_map,
+             line['cands'] = cands
+             line['cand_probs'] = cand_probs
+             line['entity_ids'] = entity_ids
+-            if dump_embs:
++            if dump_embs_global:
+                 line['ctx_emb_ids'] = ctx_emb_ids
+-            f_out.write(line)
+-    logging.info(f'Finished writing predictions to {out_file}')
++            f_out.write(ujson.dumps(line) + "\n")
 diff --git bootleg/utils/gen_entity_mappings.py bootleg/utils/gen_entity_mappings.py
 index ca2aa2b..7f57a46 100644
 --- bootleg/utils/gen_entity_mappings.py
@@ -542,6 +1779,13 @@ index ca2aa2b..7f57a46 100644
          # ensure only max_candidates per alias
          qids = sorted(alias2qids[alias],
              key = lambda x: (x[1], x[0]), reverse=True)
+@@ -45,4 +48,4 @@ def main():
+     print('entity mappings exported.')
+ 
+ if __name__ == '__main__':
+-    main()
+\ No newline at end of file
++    main()
 diff --git bootleg/utils/logging_utils.py bootleg/utils/logging_utils.py
 index 1a3c318..33ac965 100644
 --- bootleg/utils/logging_utils.py
@@ -555,6 +1799,250 @@ index 1a3c318..33ac965 100644
      log_name += train_utils.get_file_suffix(args)
      log_name += f'_gpu{args.run_config.gpu}'
      return log_name
+diff --git bootleg/utils/model_utils.py bootleg/utils/model_utils.py
+index 8f74a23..5fd9382 100644
+--- bootleg/utils/model_utils.py
++++ bootleg/utils/model_utils.py
+@@ -38,23 +38,23 @@ def get_lr(optimizer):
+         return param_group['lr']
+ 
+ def select_alias_word_sent(alias_idx_pair_sent, sent_embedding, index):
+-    alias_idx_sent = alias_idx_pair_sent[index]
++    alias_pos_in_sent = alias_idx_pair_sent[index]
+     # get alias words from sent embedding
+     # batch x seq_len x hidden_size -> batch x M x hidden_size
+-    batch_size, M = alias_idx_sent.shape
++    batch_size, M = alias_pos_in_sent.shape
+     _, seq_len, hidden_size = sent_embedding.tensor.shape
+ 
+     # expand so we can use gather
+     sent_tensor = sent_embedding.tensor.unsqueeze(1).expand(batch_size, M, seq_len, hidden_size)
+     # gather can't take negative values so we set them to the first word in the sequence
+     # we mask these out later
+-    alias_idx_sent_mask = alias_idx_sent == -1
+-    alias_idx_sent[alias_idx_sent_mask] = 0
+-    alias_word_tensor = torch.gather(sent_tensor, 2, alias_idx_sent.long().unsqueeze(-1).unsqueeze(-1).expand(
++    alias_idx_sent_mask = alias_pos_in_sent == -1
++    # copy the alias_pos_in_sent tensor to avoid overwrite errors
++    alias_pos_in_sent_cpy = torch.where(alias_pos_in_sent == -1, torch.zeros_like(alias_pos_in_sent), alias_pos_in_sent)
++    alias_word_tensor = torch.gather(sent_tensor, 2, alias_pos_in_sent_cpy.long().unsqueeze(-1).unsqueeze(-1).expand(
+         batch_size, M, 1, hidden_size)).squeeze(2)
++    # mask embedding values
+     alias_word_tensor[alias_idx_sent_mask] = 0
+-    # set indices back to -1
+-    alias_idx_sent[alias_idx_sent_mask] = -1
+     return alias_word_tensor
+ 
+ # Mask of True means keep
+diff --git bootleg/utils/preprocessing/convert_to_trans4_0.py bootleg/utils/preprocessing/convert_to_trans4_0.py
+new file mode 100644
+index 0000000..5090d06
+--- /dev/null
++++ bootleg/utils/preprocessing/convert_to_trans4_0.py
+@@ -0,0 +1,59 @@
++import glob
++import shutil
++import torch
++import os
++import ujson
++import argparse
++
++MAX_LEN = 512
++BERT_DIM = 768
++
++def parse_args():
++    parser = argparse.ArgumentParser()
++    parser.add_argument('--model_dir', type=str, required=True)
++    parser.add_argument('--bert_model', type=str, default='bert-base-cased')
++    args = parser.parse_args()
++    return args
++
++def main():
++    args = parse_args()
++    print(ujson.dumps(args, indent=4))
++
++    # Find all models
++    all_models = glob.glob(os.path.join(args.model_dir, "*.pt"))
++    saved_models = os.path.join(args.model_dir, "saved_trans_3.0.1")
++    if not os.path.exists(saved_models):
++        os.makedirs(saved_models)
++
++    for mod in all_models:
++        name = os.path.basename(mod)
++        new_file = os.path.join(saved_models, name)
++        print(f"Moving {mod} to {new_file}")
++        shutil.copyfile(mod, new_file)
++
++    # Load and convert
++    for mod in all_models:
++        model_dict = torch.load(mod, lambda storage, loc: storage)
++        mod_state_dict = model_dict["model"]
++        if "emb_layer.word_emb.embeddings.word_embeddings.weight" in mod_state_dict:
++            print("SWAP WORD EMB")
++            new_position_ids = torch.arange(MAX_LEN).expand((1, -1))
++            mod_state_dict["emb_layer.word_emb.embeddings.position_ids"] = new_position_ids
++        elif "module.emb_layer.word_emb.embeddings.word_embeddings.weight" in mod_state_dict:
++            print("SWAP WORD EMB")
++            new_position_ids = torch.arange(MAX_LEN).expand((1, -1))
++            mod_state_dict["module.emb_layer.word_emb.embeddings.position_ids"] = new_position_ids
++        if "emb_layer.entity_embs.avg_title_proj.word_emb.embeddings.word_embeddings.weight" in mod_state_dict:
++            print("SWAP TITLE WORD EMB")
++            new_position_ids = torch.arange(MAX_LEN).expand((1, -1))
++            mod_state_dict["emb_layer.entity_embs.avg_title_proj.word_emb.embeddings.position_ids"] = new_position_ids
++        elif "module.emb_layer.entity_embs.avg_title_proj.word_emb.embeddings.word_embeddings.weight" in mod_state_dict:
++            print("SWAP TITLE WORD EMB")
++            new_position_ids = torch.arange(MAX_LEN).expand((1, -1))
++            mod_state_dict["module.emb_layer.entity_embs.avg_title_proj.word_emb.embeddings.position_ids"] = new_position_ids
++        model_dict["model"] = mod_state_dict
++        print(f"Saving new model in {mod}")
++        torch.save(model_dict, mod)
++
++if __name__ == '__main__':
++    main()
+\ No newline at end of file
+diff --git bootleg/utils/sentence_utils.py bootleg/utils/sentence_utils.py
+index 3034e24..cfe75db 100644
+--- bootleg/utils/sentence_utils.py
++++ bootleg/utils/sentence_utils.py
+@@ -1,6 +1,9 @@
++from collections import defaultdict
+ from math import ceil
+ from itertools import accumulate
+ 
++from transformers.tokenization_utils import _is_control
++
+ from bootleg.symbols.constants import *
+ 
+ 
+@@ -149,17 +152,21 @@ def split_sentence(max_aliases, phrase, spans, aliases, aliases_seen_by_model, s
+         * window_sentences[i] has the tokens of the i^th window.
+     """
+     is_bert = word_symbols.is_bert
+-    sentence, aliases2see, maxlen = phrase, aliases_seen_by_model, seq_len
+-    sentence = word_symbols.tokenize(sentence)
+-
+-    if is_bert:
+-        # Example: "Kit ##tens love purple ##ish puppet ##eers" ~=~=~=> [0, 0, 1, 2, 2, 3, 3]
+-        word_indexes = list(accumulate([-1] + sentence, lambda a, b: a + int(not b.startswith('##'))))[1:]
+-        word_indexes.append(word_indexes[-1] + 1)
+-        spans = [(word_indexes.index(offset), word_indexes.index(endpos))
+-                 for offset, endpos in spans if endpos in word_indexes]
+-
+-    window_span_idxs, window_aliases2see, window_spans, window_sentences = [], [], [], []
++    sentence, aliases2see, maxlen, old_spans = phrase, aliases_seen_by_model, seq_len, spans
++    old_len = len(sentence.split())
++    assert old_spans == list(sorted(old_spans)), f"You spans {old_spans} for ***{phrase}*** are not in sorted order from smallest to largest"
++    old_to_new, sentence = get_old_to_new_word_idx_mapping(phrase, word_symbols)
++
++    spans = []
++    for sp in old_spans:
++        assert sp[0] < sp[1], f"We assume all mentions are at least length 1, but you have span {sp} where the right index is not greater than the left with phrase ***{phrase}***. Each span is in [0, length of sentence={old_len}], both inclusive"
++        assert sp[0] >= 0 and sp[1] >= 0 and sp[1] <= old_len and sp[0] <= old_len, f"The span of {sp} with ***{phrase}*** was not between [0, length of sentence={old_len}], both inclusive"
++        # We should have the right side be old_to_new[sp[1]][0], but due do tokenization occasionally removing rare unicode characters, this way ensures the right span is greater than the left
++        # because, in that case, we will have old_to_new[sp[1]-1][-1] == old_to_new[sp[0]][0] (see test case in test_sentence_utils.py)
++        spans.append([old_to_new[sp[0]][0], old_to_new[sp[1]-1][-1]+1])
++        assert spans[-1][0] < spans[-1][1], f"Adjusted spans for old span {sp} and phrase ***{phrase}*** have the right side not greater than the left side. This might be due to a spans being on a unicode character removed by tokenization."
++
++    window_span_idxs, window_aliases2see, window_spans, window_sentences, window_sentence_pos_idxs = [], [], [], [], []
+ 
+     # Sub-divide sentence into windows, respecting maxlen and max_aliases per window.
+     # This retains at least maxlen/5 context to the left and right of each alias2predict.
+@@ -168,13 +175,16 @@ def split_sentence(max_aliases, phrase, spans, aliases, aliases_seen_by_model, s
+     current_alias_idx = 0
+     for split_offset, split_endpos, split_first_alias, split_last_alias, split_aliases2see in windows:
+         sub_sentence = sentence[split_offset: split_endpos]
+-
++        sub_sentence_pos = list(range(split_offset,split_endpos))
+         if is_bert:
+             sub_sentence = pad_sentence([CLS_BERT] + sub_sentence + [SEP_BERT], PAD_BERT, maxlen+2)
++            sub_sentence_pos = pad_sentence([-2] + sub_sentence_pos + [-3], -1, maxlen+2)
+         else:
+             sub_sentence = pad_sentence(sub_sentence, PAD, maxlen)
++            sub_sentence_pos = pad_sentence(sub_sentence_pos, -1, maxlen)
+ 
+         window_sentences.append(sub_sentence)
++        window_sentence_pos_idxs.append(sub_sentence_pos)
+         window_span_idxs.append([])
+         window_aliases2see.append([])
+         window_spans.append([])
+@@ -188,7 +198,75 @@ def split_sentence(max_aliases, phrase, spans, aliases, aliases_seen_by_model, s
+ 
+             span_offset += int(is_bert)  # add one for BERT to account for [CLS]
+             span_endpos += int(is_bert)
+-            window_spans[-1].append([span_offset - split_offset, span_endpos - split_offset])
++            adjusted_endpos = span_endpos - split_offset
++            # If it's over the maxlen, adjust to be at the [CLS] token
++            if is_bert and adjusted_endpos >= maxlen+2:
++                adjusted_endpos = maxlen+2*is_bert-1
++            # If it's over the length for nonBERT, adjust to be maxlen
++            elif not is_bert and adjusted_endpos > maxlen:
++                adjusted_endpos = maxlen
++            assert span_offset - split_offset >= 0, f"The first span of {span_offset - split_offset} is less than 0"
++            window_spans[-1].append([span_offset - split_offset, adjusted_endpos])
+             current_alias_idx += 1
+ 
+-    return window_span_idxs, window_aliases2see, window_spans, window_sentences
++    return window_span_idxs, window_aliases2see, window_spans, window_sentences, window_sentence_pos_idxs
++
++
++def get_old_to_new_word_idx_mapping(sentence, word_symbols):
++    """
++    Method takes the original sentence and tokenized_sentence and builds a mapping from the original sentence spans (split on " ")
++    to the new sentence spans (after tokenization). This will account for tokenizers splitting on grammar and subwordpiece tokens
++    from BERT.
++
++    For example:
++        phrase: 'Alexander få Baldwin III (born April 3, 1958, in Massapequa, Long Island, New York, USA).'
++        tokenized sentence: ['Alexander', 'f', '##å', 'Baldwin', 'III', '(', 'born', 'April', '3', ',', '1958', ',', 'in', 'Mass', '##ap',
++                             '##e', '##qua', ',', 'Long', 'Island', ',', 'New', 'York', ',', 'USA', ')']
++
++    Output: {0: [0], 1: [1, 2], 2: [3], 3: [4], 4: [5, 6], 5: [7], 6: [8, 9], 7: [10, 11], 8: [12], 9: [13, 14, 15, 16, 17], 10: [18], 11: [19, 20],
++             12: [21], 13: [22, 23], 14: [24, 25]}
++
++    We use this to convert spans from original sentence splitting to new sentence splitting.
++    """
++    old_split = sentence.split()
++    final_tokenized_sentence = []
++    old_w = 0
++    new_w = 0
++    lost_words = 0
++    old_to_new = defaultdict(list)
++    while old_w < len(old_split):
++        old_word = old_split[old_w]
++        if old_w > 0:
++            # This will allow tokenizers that use spaces to know it's a middle word
++            old_word = " " + old_word
++        tokenized_word = [t for t in word_symbols.tokenize(old_word) if len(t) > 0]
++        # due to https://github.com/huggingface/transformers/commit/21ed3a6b993eba06e7f4cf7720f4a07cc8a0d4c2, certain characters are cleaned and removed
++        # if this is the case, we need to adjust the spans so the token is eaten
++        # print("OLD", old_w, old_word, "TOK", tokenized_word, "NEW W", new_w, "+", len(tokenized_word))
++        if len(tokenized_word) <= 0:
++            print(f"TOKENIZED WORD IS LENGTH 0. It SHOULD BE WEIRD CHARACTERS WITH ORDS", [ord(c) for c in old_word], "AND IS CONTROL", [_is_control(c) for c in old_word])
++            # if this is the last word, assign it to the previous word
++            if old_w + 1 >= len(old_split):
++                old_to_new[old_w] = [new_w-1]
++                lost_words += 1
++            else:
++                # assign the span specifically to the new_w
++                old_to_new[old_w] = [new_w]
++                lost_words += 1
++        else:
++            new_w_ids = list(range(new_w, new_w+len(tokenized_word)))
++            old_to_new[old_w] = new_w_ids
++        final_tokenized_sentence.extend(tokenized_word)
++        new_w = new_w+len(tokenized_word)
++        old_w += 1
++
++    old_to_new = dict(old_to_new)
++    # Verify that each word from both sentences are in the mappings
++    len_tokenized_sentence = len(final_tokenized_sentence)
++    assert final_tokenized_sentence == word_symbols.tokenize(sentence)
++    assert len_tokenized_sentence+lost_words >= len(old_split), f"For some reason tokenize has compressed words that weren't lost {old_split} versus {word_symbols.tokenize(sentence)}"
++    assert all(len(val) > 0 for val in old_to_new.values()), f"{old_to_new}, {sentence}"
++    assert set(range(len_tokenized_sentence)) == set([v for val in old_to_new.values() for v in val]), f"{old_to_new}, {sentence}"
++    assert set(range(len(old_split))) == set(old_to_new.keys()), f"{old_to_new}, {sentence}"
++    return old_to_new, final_tokenized_sentence
++
 diff --git bootleg/utils/train_utils.py bootleg/utils/train_utils.py
 index 8ba08a7..6a5bedf 100644
 --- bootleg/utils/train_utils.py
@@ -588,21 +2076,102 @@ index 8ba08a7..6a5bedf 100644
  
  def is_slicing_model(args):
 diff --git bootleg/utils/utils.py bootleg/utils/utils.py
-index 5129dc1..63992ae 100644
+index ac4f08c..63992ae 100644
 --- bootleg/utils/utils.py
 +++ bootleg/utils/utils.py
-@@ -14,6 +14,7 @@ import pickle
+@@ -3,7 +3,9 @@ Useful functions
+ '''
+ import copy
+ from importlib import import_module
++from itertools import islice, chain
+ 
++import marisa_trie
+ import ujson
+ import json # we need this for dumping nans
+ import logging
+@@ -11,6 +13,9 @@ import os
+ import pickle
  import sys
  import torch
- from tqdm import tqdm
++from tqdm import tqdm
 +import subprocess
- 
++
  
  def recursive_transform(x, test_func, transform):
-@@ -175,3 +176,33 @@ def import_class(prefix_string, base_string):
+     """Applies a transformation recursively to each member of a dictionary
+@@ -56,9 +61,65 @@ def load_pickle_file(filename):
+         contents = pickle.load(f)
+     return contents
+ 
++def create_single_item_trie(in_dict, out_file=""):
++    keys = []
++    values = []
++    for k in tqdm(in_dict, total=len(in_dict), desc="Reading values for marisa trie"):
++        assert type(in_dict[k]) is int
++        keys.append(k)
++        # Tries require list of item for the record trie
++        values.append(tuple([in_dict[k]]))
++    fmt = "<l"
++    trie = marisa_trie.RecordTrie(fmt, zip(keys, values))
++    if out_file != "":
++        trie.save(out_file)
++    return trie
++
++def load_single_item_trie(file):
++    assert exists_dir(file)
++    return marisa_trie.RecordTrie('<l').mmap(file)
++
+ def flatten(arr):
+     return [item for sublist in arr for item in sublist]
+ 
++def chunks(iterable, n):
++   """chunks(ABCDE,2) => AB CD E"""
++   iterable = iter(iterable)
++   while True:
++       try:
++           yield chain([next(iterable)], islice(iterable, n-1))
++       except StopIteration:
++           return None
++
++def chunk_file(in_file, out_dir, num_lines, prefix="out_"):
++    ensure_dir(out_dir)
++    out_files = {}
++    total_lines = 0
++    ending = os.path.splitext(in_file)[1]
++    with open(in_file) as bigfile:
++        i = 0
++        while True:
++            try:
++                lines = next(chunks(bigfile, num_lines))
++            except StopIteration:
++                break
++            except RuntimeError:
++                break
++            file_split = os.path.join(out_dir, f"{prefix}{i}{ending}")
++            total_file_lines = 0
++            i += 1
++            with open(file_split, 'w') as f:
++                while True:
++                    try:
++                        line = next(lines)
++                    except StopIteration:
++                        break
++                    total_lines += 1
++                    total_file_lines += 1
++                    f.write(line)
++            out_files[file_split] = total_file_lines
++    return total_lines, out_files
++
+ def get_size(obj, seen=None):
+     """Recursively finds size of objects"""
+     size = sys.getsizeof(obj)
+@@ -114,4 +175,34 @@ def import_class(prefix_string, base_string):
+     return mod, load_class
  
  def remove_dots(str):
-     return str.replace(".", "_")
+-    return str.replace(".", "_")
+\ No newline at end of file
++    return str.replace(".", "_")
 +
 +# get gpu memory and utilization usage
 +def get_gpu_map():
@@ -633,4 +2202,34 @@ index 5129dc1..63992ae 100644
 +    final_args.data_config.emb_dir = os.path.join(args.base_dir, final_args.data_config.emb_dir)
 +    final_args.data_config.word_embedding.cache_dir = os.path.join(args.base_dir, final_args.data_config.word_embedding.cache_dir)
 +    final_args.run_config.save_dir = os.path.join(args.base_dir, final_args.run_config.save_dir)
+\ No newline at end of file
+diff --git requirements.txt requirements.txt
+index 0f6be2e..4f0f2bb 100644
+--- requirements.txt
++++ requirements.txt
+@@ -1,3 +1,4 @@
++argh==0.26.2
+ ipdb==0.12.3
+ jsonlines==1.2.0
+ marisa_trie==0.7.5
+@@ -12,15 +13,12 @@ pytest==5.3.0
+ scikit_learn==0.22
+ scipy==1.3.1
+ seaborn==0.9.0
++tabulate==0.8.7
+ tagme==0.1.3
+-tensorboardX==2.0
+ tensorboard==2.4
+-termcolor==1.1.0
++tensorboardX==2.0
+ torch==1.5.0
+-transformers==3.0.1
+ torchtext==0.4.0
++tqdm==4.51.0
++transformers==3.0.1
+ ujson==1.35
+-smdebug==0.7.1
+-tabulate==0.8.7
+-argh==0.26.2
+-tqdm==4.51.0
 \ No newline at end of file

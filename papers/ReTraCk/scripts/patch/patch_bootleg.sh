@@ -7,9 +7,9 @@ cd $RETRACK_HOME
 cd ..
 git clone https://github.com/HazyResearch/bootleg
 cd bootleg
-git checkout d43ce8c9d775c6d20b8319087808014a9635605c
+git checkout 37b0e67af8a790673a445798339db0d90f009e13
 
-patch -p0 -l -i ../ListQA/retriever/diff/bootleg.diff
+patch -p0 -l -i ../ReTraCk/retriever/diff/bootleg.diff
 
 echo "Removing unnecessary assets..."
 
@@ -17,21 +17,21 @@ rm -rf .git
 rm -rf configs
 rm -rf data
 rm -rf docs
-rm -rf test
+rm -rf testcd
 rm -rf tutorials
-rm -f .gitignore 
-rm -f .travis.yml 
-rm -f *.md 
+rm -f .gitignore
+rm -f .travis.yml
+rm -f *.md
 rm -f download*.sh
-rm -f requirements.txt
-rm -f setup.py
+#rm -f requirements.txt
+#rm -f setup.py
 
 echo "Copying assets to ReTraCk location"
 
-/bin/cp -rf ./ ../ListQA/retriever/entitylinking/bootleg/bootleg_aml
+/bin/cp -rf ./ ../ReTraCk/retriever/entitylinking/bootleg/
 
-/bin/cp -rf ../ListQA/retriever/diff/bootleg/configs/ ../ListQA/retriever/entitylinking/bootleg/bootleg_aml
-/bin/cp -rf ../ListQA/retriever/diff/bootleg/*.py ../ListQA/retriever/entitylinking/bootleg/bootleg_aml
+/bin/cp -rf ../ReTraCk/retriever/diff/bootleg/configs/ ../ReTraCk/retriever/entitylinking/bootleg/
+/bin/cp -rf ../ReTraCk/retriever/diff/bootleg/*.py ../ReTraCk/retriever/entitylinking/bootleg/
 
 echo "Cleanup..."
 

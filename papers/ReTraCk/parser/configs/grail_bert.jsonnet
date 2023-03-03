@@ -50,8 +50,8 @@
 			"type": "dot_product"
 		},
 		"dropout_rate": 0.1,
-		"maximum_negative_chunk": 4,
-		"maximum_negative_cand": 150,
+		"maximum_negative_chunk": 5,
+		"maximum_negative_cand": 200,
 		"dynamic_negative_ratio": 1.0,
 		"utterance_agg_method": "first",
 		"entity_order_method": "shuffle",
@@ -73,10 +73,12 @@
 		}
 	},
 	"trainer": {
-		"num_epochs": 100,
+		"num_epochs": 10,
 		"cuda_device": 0,
-		"patience": 100,
-		"num_gradient_accumulation_steps": 1,
+		"num_gradient_accumulation_steps": 20,
+		"checkpointer": {
+        	"num_serialized_models_to_keep": 0
+        },
 		"validation_metric": "+avg_exact_match",
 		"optimizer": {
 			"type": "adam",
@@ -86,11 +88,17 @@
 						".*text_embedder.*"
 					],
 					{
-						"lr": 1e-5
+						"lr": 2e-5
 					}
 				]
 			],
 			"lr": 1e-3
-		}
+		},
+		"learning_rate_scheduler": {
+            "type": "reduce_on_plateau",
+        	"factor": 0.5,
+        	"mode": "max",
+        	"patience": 5
+        }
 	}
 }
