@@ -31,7 +31,7 @@ prettytable
 nltk==3.6.6
 
 # REST API
-Flask==1.1.1
+Flask==2.3.2
 Flask-Cors==3.0.9
 regex
 requests
