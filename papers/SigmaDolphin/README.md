@@ -6,6 +6,7 @@ This repository contains the open-sourced data of our collected math word proble
 
 [Project URL](https://www.microsoft.com/en-us/research/project/sigmadolphin/)
 
+
 If you find this repo helpful, please cite the following paper
 
 ```bib
@@ -26,4 +27,3 @@ If you find this repo helpful, please cite the following paper
 
 For any questions/comments, please feel free to open GitHub issues.
 
-## Data release will be coming soon, under CELA review

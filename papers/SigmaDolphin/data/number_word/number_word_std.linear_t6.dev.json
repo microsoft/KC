@@ -1,0 +1,1102 @@
+[
+  {
+    "id": "algebra.com.101793",
+    "index": 49,
+    "text": "Find two numbers whose sum is 62 and whose difference is  6.",
+    "sources": "algebra.com.101793",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=62",
+      "equ: x-y=6"
+    ],
+    "ans": "{34; 28}",
+    "ans_simple": [
+      34,
+      28
+    ]
+  },
+  {
+    "id": "algebra.com.112903",
+    "index": 1032,
+    "text": "the sum of two numbers is 68. their difference is 16. what are the numbers?",
+    "sources": "algebra.com.112903",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=68",
+      "equ: x-y=16"
+    ],
+    "ans": "{42;26}",
+    "ans_simple": [
+      42,
+      26
+    ]
+  },
+  {
+    "id": "algebra.com.193198",
+    "index": 1256,
+    "text": "the sum of two numbers is 97. the difference of the two numbers is 57. find the two numbers",
+    "sources": "algebra.com.193198",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=97",
+      "equ: x-y=57"
+    ],
+    "ans": "{77; 20}",
+    "ans_simple": [
+      77,
+      20
+    ]
+  },
+  {
+    "id": "algebra.com.196398",
+    "index": 1261,
+    "text": "the sum of two numbers is 18. their difference is 22. what are the numbers?",
+    "sources": "algebra.com.196398",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=18",
+      "equ: x-y=22"
+    ],
+    "ans": "{20; -2}",
+    "ans_simple": [
+      20,
+      -2
+    ]
+  },
+  {
+    "id": "algebra.com.216868",
+    "index": 1337,
+    "text": "i have two numbers. the sum is 36 and the difference is 9. what are the two numbers?",
+    "sources": "algebra.com.216868",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=36",
+      "equ: x-y=9"
+    ],
+    "ans": "{45\/2; 27\/2} | {22.5; 13.5}",
+    "ans_simple": [
+      22.5,
+      13.5
+    ]
+  },
+  {
+    "id": "algebra.com.3133",
+    "index": 40,
+    "text": "The sum of 2 integers is 36. The difference of the same 2 numbers is 4. Find the integers.",
+    "sources": "algebra.com.3133",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=36",
+      "equ: y-x=4"
+    ],
+    "ans": "{20; 16}",
+    "ans_simple": [
+      20,
+      16
+    ]
+  },
+  {
+    "id": "algebra.com.432985",
+    "index": 594,
+    "text": "The difference of two numbers is 9 and their sum is 37. what are the numbers?",
+    "sources": "algebra.com.432985",
+    "equations": [
+      "unkn: x,y",
+      "equ: x-y=9",
+      "equ: x+y=37"
+    ],
+    "ans": "{23; 14}",
+    "ans_simple": [
+      23,
+      14
+    ]
+  },
+  {
+    "id": "algebra.com.612557",
+    "index": 736,
+    "text": "The difference between two numbers is 24. Find the numbers if their sum is 88.",
+    "sources": "algebra.com.612557",
+    "equations": [
+      "unkn: x,y",
+      "equ: x-y=24",
+      "equ: x+y=88"
+    ],
+    "ans": "{32; 56}",
+    "ans_simple": [
+      32,
+      56
+    ]
+  },
+  {
+    "id": "yahoo.answers.20070524141453aahh0nv",
+    "index": 1404,
+    "text": "A number is 12 less than another.  The sum of the numbers is 28.  find the Numbers.",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20070524141453AAHH0NV",
+    "equations": [
+      "unkn: m,n",
+      "equ: m = n - 12",
+      "equ: m + n = 28"
+    ],
+    "ans": "{8; 20}",
+    "ans_simple": [
+      8,
+      20
+    ]
+  },
+  {
+    "id": "algebra.com.142635",
+    "index": 1364,
+    "text": "The sum of two numbers is 64. If twice the smaller number is subtracted from the larger number, the result is 16. Find the two numbers.",
+    "sources": "algebra.com.142635",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=64",
+      "equ: y - 2*x = 16"
+    ],
+    "ans": "{16; 48}",
+    "ans_simple": [
+      16,
+      48
+    ]
+  },
+  {
+    "id": "yahoo.answers.20080911174339aamgdzd",
+    "index": 1521,
+    "text": "The sum of two numbers is 91.  The larger number is 1 more than 4 times the smaller number. Find the numbers.",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20080911174339AAMGDzd",
+    "equations": [
+      "unkn: x,y",
+      "equ: x + y = 91",
+      "equ: x = 1 + 4*y"
+    ],
+    "ans": "{18; 73}",
+    "ans_simple": [
+      18,
+      73
+    ]
+  },
+  {
+    "id": "algebra.com.157265",
+    "index": 1160,
+    "text": "2 more than 6 times a number is 20 more than 3 times the number. Find the number.",
+    "sources": "algebra.com.157265",
+    "equations": [
+      "unkn: x",
+      "equ: 2+6*x=20+3*x"
+    ],
+    "ans": "6",
+    "ans_simple": [
+      6
+    ]
+  },
+  {
+    "id": "yahoo.answers.20080724143616aaciqtd",
+    "index": 1510,
+    "text": "Fifteen more than four times a number is 6 more than five times the number. what's the value of the number?",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20080724143616AAcIqTD",
+    "equations": [
+      "unkn: n",
+      "equ: 15 + 4*n = 6 + 5*n"
+    ],
+    "ans": "9",
+    "ans_simple": [
+      9
+    ]
+  },
+  {
+    "id": "yahoo.answers.20100402174544aakgste",
+    "index": 1622,
+    "text": "5 less than 6 times a whole number is 9 less than 8 times that number. Find the number.",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20100402174544AAkGSTE",
+    "equations": [
+      "unkn: n",
+      "equ: 6*n - 5 = 8*n - 9"
+    ],
+    "ans": "2",
+    "ans_simple": [
+      2
+    ]
+  },
+  {
+    "id": "algebra.com.116670",
+    "index": 1349,
+    "text": "The sum of two numbers is 42. one number is 3 less than 4 times the other number. what are the numbers?",
+    "sources": "algebra.com.116670",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=42",
+      "equ: x = 4*y - 3"
+    ],
+    "ans": "{33; 9}",
+    "ans_simple": [
+      33,
+      9
+    ]
+  },
+  {
+    "id": "algebra.com.124572",
+    "index": 1057,
+    "text": "One number is 3 less than twice another number.  If the sum of the numbers is 330, find the two numbers.",
+    "sources": "algebra.com.124572",
+    "equations": [
+      "unkn: x,y",
+      "equ: x=2*y-3",
+      "equ: x+y=330"
+    ],
+    "ans": "{219;111}",
+    "ans_simple": [
+      219,
+      111
+    ]
+  },
+  {
+    "id": "algebra.com.797657",
+    "index": 868,
+    "text": "find two consecutive odd integers such that three times the smaller one exceeds two times the larger one by 7",
+    "sources": "algebra.com.797657",
+    "equations": [
+      "unkn: 2*k-1, 2*k+1",
+      "equ: 3(2*k-1)=7+2*(2*k+1)"
+    ],
+    "ans": "11; 13",
+    "ans_simple": [
+      11,
+      13
+    ]
+  },
+  {
+    "id": "algebra.com.2819",
+    "index": 36,
+    "text": "The sum of two integers is 10. Three times the larger integer is three less than eight times the smaller integer. Find the integers.",
+    "sources": [
+      "algebra.com.2819",
+      "algebra.com.24638",
+      "algebra.com.212816"
+    ],
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=10",
+      "equ: 3*y+3=8*x"
+    ],
+    "ans": "{3; 7}",
+    "ans_simple": [
+      3,
+      7
+    ]
+  },
+  {
+    "id": "algebra.com.449815",
+    "index": 606,
+    "text": "the sum of two consecutive integers is 185. Find the 2 integers.",
+    "sources": "algebra.com.449815",
+    "equations": [
+      "unkn: x,x+1",
+      "equ: x+(x+1)=185"
+    ],
+    "ans": "92; 93",
+    "ans_simple": [
+      92,
+      93
+    ]
+  },
+  {
+    "id": "algebra.com.18229",
+    "index": 1237,
+    "text": "the sum of two consecutive odd integers is 40. find the numbers",
+    "sources": "algebra.com.18229",
+    "equations": [
+      "unkn: 2*n-1, 2*n+1",
+      "equ: (2*n-1)+(2*n+1) = 40"
+    ],
+    "ans": "19; 21",
+    "ans_simple": [
+      19,
+      21
+    ]
+  },
+  {
+    "id": "algebra.com.135408",
+    "index": 96,
+    "text": "Find two consecutive integers such that 3 times the first integer plus 2 times the second integer is equal to 107.",
+    "sources": "algebra.com.135408",
+    "equations": [
+      "unkn: x,x+1",
+      "equ: 3*x+2*(x+1)=107"
+    ],
+    "ans": "21; 22",
+    "ans_simple": [
+      21,
+      22
+    ]
+  },
+  {
+    "id": "algebra.com.714518",
+    "index": 817,
+    "text": "Find two consecutive  whole numbers such that 5 times the smaller number added by 3 times the greater number makes 59",
+    "sources": "algebra.com.714518",
+    "equations": [
+      "unkn: x,x+1",
+      "equ: 5*x+3(x+1)=59"
+    ],
+    "ans": "7;8",
+    "ans_simple": [
+      7,
+      8
+    ]
+  },
+  {
+    "id": "algebra.com.407000",
+    "index": 569,
+    "text": "The greater of two consecutive even integers is 14 less than three times the smaller integer. Find the integers.",
+    "sources": "algebra.com.407000",
+    "equations": [
+      "unkn: 2*k,2*k+2",
+      "equ: 2*k+2=3*(2*k)-14"
+    ],
+    "ans": "8; 10",
+    "ans_simple": [
+      8,
+      10
+    ]
+  },
+  {
+    "id": "algebra.com.102184",
+    "index": 51,
+    "text": "Find three consecutive numbers whose sum is 72.",
+    "sources": "algebra.com.102184",
+    "equations": [
+      "unkn: k-1,k,k+1",
+      "equ: (k-1)+k+(k+1)=72"
+    ],
+    "ans": "23; 24; 25",
+    "ans_simple": [
+      23,
+      24,
+      25
+    ]
+  },
+  {
+    "id": "algebra.com.219379",
+    "index": 215,
+    "text": "The sum of three consecutive integers is 144. find the integers.",
+    "sources": "algebra.com.219379",
+    "equations": [
+      "unkn: x-1,x,x+1",
+      "equ: (x-1)+x+(x+1)=144"
+    ],
+    "ans": "47; 48; 49",
+    "ans_simple": [
+      47,
+      48,
+      49
+    ]
+  },
+  {
+    "id": "algebra.com.279611",
+    "index": 332,
+    "text": "The sum of three consecutive whole numbers is 24.  What are the integers?",
+    "sources": "algebra.com.279611",
+    "equations": [
+      "unkn: x-1,x,x+1",
+      "equ: (x-1)+x+(x+1)=24"
+    ],
+    "ans": "7; 8; 9",
+    "ans_simple": [
+      7,
+      8,
+      9
+    ]
+  },
+  {
+    "id": "algebra.com.312794",
+    "index": 397,
+    "text": "Three consecutive integers have the sum of 153. What is the second integer?",
+    "sources": "algebra.com.312794",
+    "equations": [
+      "unkn: x-1,x,x+1",
+      "equ: (x-1)+x+(x+1)=153"
+    ],
+    "ans": "51",
+    "ans_simple": [
+      51
+    ]
+  },
+  {
+    "id": "algebra.com.833110",
+    "index": 916,
+    "text": "The sum of three consecutive even integers is 480. Find the three integers",
+    "sources": "algebra.com.833110",
+    "equations": [
+      "unkn: x-2, x, x+2",
+      "equ: x-2+x+x+2=480"
+    ],
+    "ans": "158; 160; 162",
+    "ans_simple": [
+      158,
+      160,
+      162
+    ]
+  },
+  {
+    "id": "algebra.com.833430",
+    "index": 917,
+    "text": "THE SUM OF  3 CONSECUTIVE ODD NUMBERS IS 249. FIND THE INTEGERS",
+    "sources": "algebra.com.833430",
+    "equations": [
+      "unkn: x-2, x, x+2",
+      "equ: x-2+x+x+2=249"
+    ],
+    "ans": "81; 83; 85",
+    "ans_simple": [
+      81,
+      83,
+      85
+    ]
+  },
+  {
+    "id": "algebra.com.380951",
+    "index": 529,
+    "text": "find four consecutive odd integers whose sum is 8 using an equation",
+    "sources": "algebra.com.380951",
+    "equations": [
+      "unkn: 2*k-3,2*k-1,2*k+1,2*k+3",
+      "equ: (2*k-3)+(2*k-1)+(2*k+1)+(2*k+3)=8"
+    ],
+    "ans": "-1; 1; 3; 5",
+    "ans_simple": [
+      -1,
+      1,
+      3,
+      5
+    ]
+  },
+  {
+    "id": "algebra.com.109803",
+    "index": 1020,
+    "text": "twice a number is 60 more than five times the number. what is that number?",
+    "sources": "algebra.com.109803",
+    "equations": [
+      "unkn: x",
+      "equ: 2*x-60=5*x"
+    ],
+    "ans": "-20",
+    "ans_simple": [
+      -20
+    ]
+  },
+  {
+    "id": "algebra.com.255243",
+    "index": 286,
+    "text": "five times a number is ten more than three times the number. Find the number.",
+    "sources": "algebra.com.255243",
+    "equations": [
+      "unkn: x",
+      "equ: 5*x=3*x+10"
+    ],
+    "ans": "5",
+    "ans_simple": [
+      5
+    ]
+  },
+  {
+    "id": "yahoo.answers.20080331123915aarfvyx",
+    "index": 1728,
+    "text": "I think of a number multiply it by 8 then subtract 66. The result is twice the number that i was thinking.",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20080331123915AARFvyX",
+    "equations": [
+      "unkn: x",
+      "equ: 8*x - 66 = 2*x"
+    ],
+    "ans": "11",
+    "ans_simple": [
+      11
+    ]
+  },
+  {
+    "id": "yahoo.answers.20090902190817aamgzgx",
+    "index": 1608,
+    "text": "eight times a number equals 24 more than two times the number. What is the number?",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20090902190817AAmgZGx",
+    "equations": [
+      "unkn: n",
+      "equ: 8*n = 24 + 2*n"
+    ],
+    "ans": "4",
+    "ans_simple": [
+      4
+    ]
+  },
+  {
+    "id": "algebra.com.153782",
+    "index": 1146,
+    "text": "the sum of three consecutive odd integers is 279. what are the integers?",
+    "sources": "algebra.com.153782",
+    "equations": [
+      "unkn: 2*k-1,2*k+1,2*k+3",
+      "equ: 2*k-1+2*k+1+2*k+3=279"
+    ],
+    "ans": "91;93;95",
+    "ans_simple": [
+      91,
+      93,
+      95
+    ]
+  },
+  {
+    "id": "algebra.com.246941",
+    "index": 268,
+    "text": "Find 3 consecutive odd integers such that the sum of adds to 15",
+    "sources": "algebra.com.246941",
+    "equations": [
+      "unkn: 2*k-1,2*k+1,2*k+3",
+      "equ: (2*k-1)+(2*k+1)+(2*k+3)=15"
+    ],
+    "ans": "3; 5; 7",
+    "ans_simple": [
+      3,
+      5,
+      7
+    ]
+  },
+  {
+    "id": "algebra.com.322464",
+    "index": 418,
+    "text": "3 consecutive odd integers with the sum of 237.",
+    "sources": "algebra.com.322464",
+    "equations": [
+      "unkn: 2*k-1,2*k+1,2*k+3",
+      "equ: (2*k-1)+(2*k+1)+(2*k+3)=237"
+    ],
+    "ans": "77; 79; 81",
+    "ans_simple": [
+      77,
+      79,
+      81
+    ]
+  },
+  {
+    "id": "algebra.com.481562",
+    "index": 624,
+    "text": "The sum of three consecutive odd numbers is 357. What are the three numbers?",
+    "sources": "algebra.com.481562",
+    "equations": [
+      "unkn: 2*k-1,2*k+1,2*k+3",
+      "equ: (2*k-1)+(2*k+1)+(2*k+3)=357"
+    ],
+    "ans": "117; 119; 121",
+    "ans_simple": [
+      117,
+      119,
+      121
+    ]
+  },
+  {
+    "id": "algebra.com.539031",
+    "index": 686,
+    "text": "sum of three consecutive even numbers is 186 what are the numbers",
+    "sources": "algebra.com.539031",
+    "equations": [
+      "unkn: 2*k-2,2*k,2*k+2",
+      "equ: (2*k-2)+2*k+(2*k+2)=186"
+    ],
+    "ans": "60; 62; 64",
+    "ans_simple": [
+      60,
+      62,
+      64
+    ]
+  },
+  {
+    "id": "algebra.com.567990",
+    "index": 714,
+    "text": "Find 3 consecutive even integers whose sum is 186",
+    "sources": "algebra.com.567990",
+    "equations": [
+      "unkn: 2*k-2,2*k,2*k+2",
+      "equ: (2*k-2)+(2*k)+(2*k+2)=186"
+    ],
+    "ans": "60; 62; 64",
+    "ans_simple": [
+      60,
+      62,
+      64
+    ]
+  },
+  {
+    "id": "algebra.com.312627",
+    "index": 396,
+    "text": "The larger of two numbers is four times the smaller. If their difference is eighteen, find the numbers.",
+    "sources": "algebra.com.312627",
+    "equations": [
+      "unkn: x,y",
+      "equ: y=4*x",
+      "equ: y-x=18"
+    ],
+    "ans": "{6; 24}",
+    "ans_simple": [
+      6,
+      24
+    ]
+  },
+  {
+    "id": "algebra.com.143931",
+    "index": 1117,
+    "text": "one number is three times another number and their sum is 164. find the number?",
+    "sources": "algebra.com.143931",
+    "equations": [
+      "unkn: x",
+      "equ: x=3*y",
+      "equ: x+y=164"
+    ],
+    "ans": "123",
+    "ans_simple": [
+      123
+    ]
+  },
+  {
+    "id": "yahoo.answers.20071015130544aafnvbt",
+    "index": 1698,
+    "text": "The sum of two numbers is 574. One number is six times the other. Find the larger number.",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20071015130544AAfnVbT",
+    "equations": [
+      "unkn: x",
+      "equ: x + y = 574",
+      "equ: x = 6*y"
+    ],
+    "ans": "492",
+    "ans_simple": [
+      492
+    ]
+  },
+  {
+    "id": "algebra.com.129883",
+    "index": 1087,
+    "text": "The difference between two numbers is 8. Five times the larger number is 4 more than 8 time the other. Find the numbers ?",
+    "sources": "algebra.com.129883",
+    "equations": [
+      "unkn: x, x+8",
+      "equ: (x+8)*5-8*x=4"
+    ],
+    "ans": "{12;20}",
+    "ans_simple": [
+      12,
+      20
+    ]
+  },
+  {
+    "id": "algebra.com.179379",
+    "index": 169,
+    "text": "If the sum of three consecutive odd integers is 69, what is the third of the three odd integers",
+    "sources": [
+      "algebra.com.500808",
+      "algebra.com.179379"
+    ],
+    "equations": [
+      "unkn: 2*k+3",
+      "equ: (2*k-1)+(2*k+1)+(2*k+3)=69"
+    ],
+    "ans": "25",
+    "ans_simple": [
+      25
+    ]
+  },
+  {
+    "id": "algebra.com.183077",
+    "index": 173,
+    "text": "The sum of two consecutive odd integer is 29 more than the next odd integer.  Find the three integers in increasing order.",
+    "sources": "algebra.com.183077",
+    "equations": [
+      "unkn: 2*k-1,2*k+1,2*k+3",
+      "equ: (2*k-1)+(2*k+1)=(2*k+3)+29"
+    ],
+    "ans": "31; 33; 35",
+    "ans_simple": [
+      31,
+      33,
+      35
+    ]
+  },
+  {
+    "id": "algebra.com.408757",
+    "index": 571,
+    "text": "Find 3 consecutive odd integers such that the sum of the first and third equals the sum of the second and 43.",
+    "sources": "algebra.com.408757",
+    "equations": [
+      "unkn: 2*k-1,2*k+1,2*k+3",
+      "equ: (2*k-1)+(2*k+3)=(2*k+1)+43"
+    ],
+    "ans": "41; 43; 45",
+    "ans_simple": [
+      41,
+      43,
+      45
+    ]
+  },
+  {
+    "id": "algebra.com.810615",
+    "index": 889,
+    "text": "Find Three consecutive odd integers such that the sum of the first and third equals the sum of the second and 31.",
+    "sources": "algebra.com.810615",
+    "equations": [
+      "unkn: 2*k-1, 2*k+1, 2*k+3",
+      "equ: 2*k-1+2*k+3=2*k+1+31"
+    ],
+    "ans": "29; 31; 33",
+    "ans_simple": [
+      29,
+      31,
+      33
+    ]
+  },
+  {
+    "id": "algebra.com.12680",
+    "index": 1065,
+    "text": "The sum of two numbers is  -63. The first number minus the second is -41. Find the numbers",
+    "sources": "algebra.com.12680",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+y=-63",
+      "equ: x-y=-41"
+    ],
+    "ans": "-52;-11",
+    "ans_simple": [
+      -52,
+      -11
+    ]
+  },
+  {
+    "id": "algebra.com.165432",
+    "index": 1189,
+    "text": "one number is 11 less than the other number. If their sum is -9, find the two numbers.",
+    "sources": "algebra.com.165432",
+    "equations": [
+      "unkn: x,y",
+      "equ: x+11=y",
+      "equ: x+y=-9"
+    ],
+    "ans": "{-10; 1}",
+    "ans_simple": [
+      -10,
+      1
+    ]
+  },
+  {
+    "id": "algebra.com.165743",
+    "index": 1191,
+    "text": "find two consecutive odd integers such that 4 times the larger is 29 more than three times the smaller",
+    "sources": "algebra.com.165743",
+    "equations": [
+      "unkn: 2*x-1,2*x+1",
+      "equ: 4*(2*x+1)-29=3*(2*x-1)"
+    ],
+    "ans": "21;23",
+    "ans_simple": [
+      21,
+      23
+    ]
+  },
+  {
+    "id": "algebra.com.490774",
+    "index": 628,
+    "text": "Four times the smaller of two consecutive odd integers is the same as 73 less than 5 times the larger. Find the integers.",
+    "sources": [
+      "algebra.com.490774",
+      "algebra.com.490775"
+    ],
+    "equations": [
+      "unkn: 2*k-1,2*k+1",
+      "equ: 4*(2*k-1)=5*(2*k+1)-73"
+    ],
+    "ans": "63; 65",
+    "ans_simple": [
+      63,
+      65
+    ]
+  },
+  {
+    "id": "algebra.com.175035",
+    "index": 1224,
+    "text": "the sum of two numbers is 120. if the larger number is 4 times the smaller number, find the two numbers?",
+    "sources": "algebra.com.175035",
+    "equations": [
+      "unkn: x,y",
+      "equ: x + y = 120",
+      "equ: x = 4*y"
+    ],
+    "ans": "{96; 24}",
+    "ans_simple": [
+      96,
+      24
+    ]
+  },
+  {
+    "id": "algebra.com.175346",
+    "index": 1229,
+    "text": "a number is twice another number. if their sum is 48 find the numbers.",
+    "sources": "algebra.com.175346",
+    "equations": [
+      "unkn: x,y",
+      "equ: x = 2*y",
+      "equ: x + y = 48"
+    ],
+    "ans": "32; 16",
+    "ans_simple": [
+      32,
+      16
+    ]
+  },
+  {
+    "id": "algebra.com.355012",
+    "index": 479,
+    "text": "The sum of two numbers is 42. One number is 2 times as large as the other. What are the numbers?",
+    "sources": "algebra.com.355012",
+    "equations": [
+      "unkn: x,y",
+      "equ: x=2*y",
+      "equ: x+y=42"
+    ],
+    "ans": "{28; 14}",
+    "ans_simple": [
+      28,
+      14
+    ]
+  },
+  {
+    "id": "yahoo.answers.20080512161334aamfhez",
+    "index": 1740,
+    "text": "Nine more than four times a number is the same as one less than twice the number. Find the number.",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20080512161334AAMfheZ",
+    "equations": [
+      "unkn: x",
+      "equ: 9 + 4*x = 2*x - 1"
+    ],
+    "ans": "-5",
+    "ans_simple": [
+      -5
+    ]
+  },
+  {
+    "id": "algebra.com.126700",
+    "index": 1064,
+    "text": "Twice the sum of a number and 8 is 40. Find the number",
+    "sources": "algebra.com.126700",
+    "equations": [
+      "unkn: x",
+      "equ: 2*(x+8)=40"
+    ],
+    "ans": "12",
+    "ans_simple": [
+      12
+    ]
+  },
+  {
+    "id": "algebra.com.876960",
+    "index": 967,
+    "text": "find the three consecutive integers whose sum is 99",
+    "sources": "algebra.com.876960",
+    "equations": [
+      "unkn: x,x+1,x+2",
+      "equ: x + (x+1) + (x+2) = 99"
+    ],
+    "ans": "32;33;34",
+    "ans_simple": [
+      32,
+      33,
+      34
+    ]
+  },
+  {
+    "id": "yahoo.answers.20080310183657aarzssh",
+    "index": 1846,
+    "text": "What three consecutive even integers have a sum of 150?",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20080310183657AArZSSH",
+    "equations": [
+      "unkn: n,n+2,n+4",
+      "equ: n+(n+2)+(n+4) = 150"
+    ],
+    "ans": "48; 50; 52",
+    "ans_simple": [
+      48,
+      50,
+      52
+    ]
+  },
+  {
+    "id": "algebra.com.762759",
+    "index": 838,
+    "text": "The sum of three consecutive odd numbers is 153. Which is the LARGEST number?",
+    "sources": "algebra.com.762759",
+    "equations": [
+      "unkn: 2*k+5",
+      "equ: 2*k+1+2*k+3+2*k+5=153"
+    ],
+    "ans": "53",
+    "ans_simple": [
+      53
+    ]
+  },
+  {
+    "id": "algebra.com.101117",
+    "index": 979,
+    "text": "if the sum of a number and 7 is tripled, the result is 3 less than twice the number",
+    "sources": "algebra.com.101117",
+    "equations": [
+      "unkn: x",
+      "equ: 3(x+7)=2*x-3"
+    ],
+    "ans": "-24",
+    "ans_simple": [
+      -24
+    ]
+  },
+  {
+    "id": "algebra.com.103719",
+    "index": 991,
+    "text": "One number is 5 more than another number. Three times the first plus twice the second is 30. Find the numbers.",
+    "sources": "algebra.com.103719",
+    "equations": [
+      "unkn: x,y",
+      "equ: x-y=5",
+      "equ: 3*x+2*y=30"
+    ],
+    "ans": "8; 3",
+    "ans_simple": [
+      8,
+      3
+    ]
+  },
+  {
+    "id": "algebra.com.175940",
+    "index": 1231,
+    "text": "The difference between two numbers is 18. Twice the smaller number plus three times the larger is 74. What are the numbers?",
+    "sources": "algebra.com.175940",
+    "equations": [
+      "unkn: x,y",
+      "equ: x - y = 18",
+      "equ: 2*y + 3*x = 74"
+    ],
+    "ans": "22; 4",
+    "ans_simple": [
+      22,
+      4
+    ]
+  },
+  {
+    "id": "yahoo.answers.20070430180905aaeczyh",
+    "index": 1395,
+    "text": "The difference between two numbers is 9. The sum of twice the larger number and three times the smaller number is 33. Find the two numbers.",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20070430180905AAECZYH",
+    "equations": [
+      "unkn: m,n",
+      "equ: m - n = 9",
+      "equ: 2*m + 3*n = 33"
+    ],
+    "ans": "{12; 3}",
+    "ans_simple": [
+      12,
+      3
+    ]
+  },
+  {
+    "id": "algebra.com.117395",
+    "index": 1043,
+    "text": "one number is 11 more than another number. Find the two numbers if three times the larger exceeds four times the smaller number by 4.",
+    "sources": "algebra.com.117395",
+    "equations": [
+      "unkn: x,y",
+      "equ: x=y+11",
+      "equ: 3*x=4*y+4"
+    ],
+    "ans": "{40;29}",
+    "ans_simple": [
+      40,
+      29
+    ]
+  },
+  {
+    "id": "yahoo.answers.20091227181039aazhen8",
+    "index": 1617,
+    "text": "One number is 3 less than a second number. Twice the second number is 12 less than 5 times the first. Find the two numbers.",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20091227181039AAZHeN8",
+    "equations": [
+      "unkn: x,y",
+      "equ: x + 3 = y",
+      "equ: 2*y + 12 = 5*x"
+    ],
+    "ans": "6; 9",
+    "ans_simple": [
+      6,
+      9
+    ]
+  },
+  {
+    "id": "algebra.com.129810",
+    "index": 1084,
+    "text": "I THINK OF A NUMBER IF I MULTIPLY IT BY 6 THE ANSWER WILL BE 80. what IS the number?",
+    "sources": "algebra.com.129810",
+    "equations": [
+      "unkn: x",
+      "equ: 6*x=80"
+    ],
+    "ans": "40\/3 | 13.333",
+    "ans_simple": [
+      13.333
+    ]
+  },
+  {
+    "id": "yahoo.answers.20080520122201aamxs2e",
+    "index": 1741,
+    "text": "76 is 80% of what number?",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20080520122201AAmXs2e",
+    "equations": [
+      "unkn: x",
+      "equ: 76 = 0.8*x"
+    ],
+    "ans": "95",
+    "ans_simple": [
+      95
+    ]
+  },
+  {
+    "id": "yahoo.answers.20070802234331aalr3or",
+    "index": 1415,
+    "text": "120=100(M\/10),what is the value of M?",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20070802234331AALR3oR",
+    "equations": [
+      "unkn: m",
+      "equ: 120=100(m/10)"
+    ],
+    "ans": "12",
+    "ans_simple": [
+      12
+    ]
+  },
+  {
+    "id": "yahoo.answers.20080510221237aai2poh",
+    "index": 1492,
+    "text": "12 is 3\/4 of what number?",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20080510221237AAI2Poh",
+    "equations": [
+      "unkn: n",
+      "equ: 12 = 3/4 * n"
+    ],
+    "ans": "16",
+    "ans_simple": [
+      16
+    ]
+  },
+  {
+    "id": "yahoo.answers.20110922164416aaextmv",
+    "index": 1653,
+    "text": "60 is 140% of what number?",
+    "sources": "https:\/\/answers.yahoo.com\/question\/index?qid=20110922164416AAeXtMV",
+    "equations": [
+      "unkn: x",
+      "equ: 60 = 140/100 * x"
+    ],
+    "ans": "300\/7 | 42.857",
+    "ans_simple": [
+      42.857
+    ]
+  }
+]
