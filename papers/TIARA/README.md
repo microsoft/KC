@@ -72,7 +72,7 @@ conda env remove -n tiara
 
 ### 3. Setup Data and Code
 
-TIARA requires some pre-processed data. It can be downloaded from [Azure Storage](https://kcpapers.blob.core.windows.net/tiara-emnlp2022/TIARA_DATA.zip) (7.8GB). Please download it and unzip the data folder before running.
+TIARA requires some pre-processed data. It can be downloaded from [Azure Storage](https://drive.google.com/file/d/171vTwW-tO4_5DdEzlYljj2-M3YHvegYF/view?usp=sharing) (7.8GB). Please download it and unzip the data folder before running.
 
 ```shell
 wget
