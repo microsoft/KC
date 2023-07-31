@@ -1,0 +1,9 @@
+# conda install -c pytorch pytorch
+# pip install -r requirements.txt
+transformers
+datasets
+torch
+pandas
+numpy
+sklearn
+joblib
