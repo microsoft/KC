@@ -6,7 +6,7 @@ word2number
 conllu
 numpy
 datasets
-transformers==4.17.0
+transformers==4.30.0
 parsimonious
 unidecode
 sklearn
